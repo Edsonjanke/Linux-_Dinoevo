@@ -1,0 +1,45 @@
+# LinuxCNC runtime
+*.var
+*.var.bak
+sim.log
+halshow.preferences
+autosave.halscope
+
+# Python cache
+__pycache__/
+*.pyc
+
+# PlatformIO build
+octopus_fw/.pio/
+octopus_fw/.vscode/
+
+# Test scripts
+test_modbus.py
+
+# Temp files
+*.tmp
+*.swp
+*~
+
+# HAL signal debug files (empty)
+mpg-a
+mpg-b
+mpg-enabled
+estop-ext
+axis-is-z
+mode-auto
+mode-manual
+mode-mdi
+iocontrol.0.emc-enable-in
+
+# Pickle data
+.vcp_persistent_data.pickle
+
+# Claude config
+.claude/
+
+# Old diag scripts
+diag_encoder*.sh
+fix_encoder.sh
+mapear_db15.sh
+hm2.txt
