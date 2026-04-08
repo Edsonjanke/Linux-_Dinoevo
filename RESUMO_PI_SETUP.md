@@ -45,36 +45,33 @@ Todo controle real fica no PC com Mesa 7i92.
   - INPUT_PROP_DIRECT (toque direto)
 - [x] Tela mostrando login do Linux (console)
 
-### PROXIMO PASSO: Configurar VNC no PC do LinuxCNC
+### FEITO no PC (2026-04-08):
+- [x] IP da segunda placa de rede descoberto: **192.168.0.113** (enp3s0)
+- [x] Corrigido `/etc/default/grub` (tinha CRLF do Windows, quebrava grub-mkconfig)
+- [x] Removido pacote `raspi-firmware` do PC (nao deveria estar no PC, travava dpkg)
+- [x] dpkg destravado, kernel RT configurado com sucesso
+- [x] x11vnc instalado no PC (versao 0.9.16)
 
-O PC do torno tem 2 placas de rede:
-- eth Mesa: 10.10.10.1 (dedicada Mesa 7i92)
-- eth rede local: IP a descobrir (para o Pi)
+### PROXIMO PASSO: Conectar Pi na rede e testar VNC
 
-**No PC do LinuxCNC (via SSH ou presencial):**
-
-1. Descobrir IP da segunda placa de rede:
+1. No Pi, conectar WiFi ou ethernet na rede local (192.168.0.x)
    ```bash
-   ip addr show | grep "inet "
+   sudo raspi-config
+   # System Options → Wireless LAN → SSID + senha
    ```
 
-2. Instalar servidor VNC no PC:
-   ```bash
-   sudo apt install x11vnc
-   ```
-
-3. Testar servidor VNC:
+2. Testar servidor VNC no PC:
    ```bash
    x11vnc -display :0 -forever -nopw -listen 0.0.0.0
    ```
 
-4. No Pi (via SSH no Pi):
+3. No Pi (via SSH no Pi):
    ```bash
    export DISPLAY=:0
-   xtigervncviewer <IP_DO_PC>:0 -fullscreen
+   xtigervncviewer 192.168.0.113:0 -fullscreen
    ```
 
-5. Se funcionar, configurar autostart no Pi:
+4. Se funcionar, configurar autostart no Pi:
    - Boot direto no VNC client fullscreen
    - Desligar cursor do mouse (touch nao precisa)
    - Reconexao automatica se perder conexao
@@ -90,13 +87,13 @@ O PC do torno tem 2 placas de rede:
 ## Credenciais
 - **Pi SSH:** `ssh evo@cyberdino.local`
 - **User/senha:** evo / (definida no rpi-imager)
-- **PC LinuxCNC:** usuario evo, hostname 192 (confirmar)
+- **PC LinuxCNC:** usuario evo, IP 192.168.0.113
 
 ## Rede
 ```
 PC LinuxCNC (Debian 12)
-├── eth0: 10.10.10.1/8 ──── Mesa 7i92 (10.10.10.10)
-└── eth1: ???.???.???.??? ── rede "evo" (192.168.0.x)
+├── enp2s0: 10.10.10.1/24 ── Mesa 7i92 (10.10.10.10)
+└── enp3s0: 192.168.0.113/24 ── rede "evo" (192.168.0.x)
 
 Pi 3B+ (Raspberry Pi OS Lite 32-bit)
 ├── eth0: link-local (cabo ethernet direto)
