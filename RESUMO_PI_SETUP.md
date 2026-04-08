@@ -96,11 +96,18 @@ O PC do torno tem 2 placas de rede:
 ```
 PC LinuxCNC (Debian 12)
 ├── eth0: 10.10.10.1/8 ──── Mesa 7i92 (10.10.10.10)
-└── eth1: ???.???.???.??? ── Pi 3B+ (cyberdino.local)
+└── eth1: ???.???.???.??? ── rede "evo" (192.168.0.x)
 
 Pi 3B+ (Raspberry Pi OS Lite 32-bit)
-└── eth0: DHCP (cyberdino.local)
+├── eth0: link-local (cabo ethernet direto)
+└── wlan0: 192.168.0.103/24 ── WiFi "evo" (senha: evoprint)
 ```
+
+WiFi habilitado com:
+- `sudo raspi-config nonint do_wifi_country BR`
+- `sudo rfkill unblock all && sudo systemctl restart NetworkManager`
+- `sudo nmcli dev wifi connect "evo" password "evoprint"`
+- Conexao salva, reconecta automatico no boot
 
 ## Imagem CB1 (gravada no SD da CB1, NAO do Pi)
 - CB1_Debian12_minimal_kernel6.6_20241219.img
