@@ -3,7 +3,7 @@
  * BTT Octopus v1.1 (STM32F446ZET6)
  *
  * Encoder FYSETC EC11 -> STOP_0 (A), STOP_1 (B), STOP_2 (Button)
- * Saida USB CDC Serial: "E:<count> B:<0|1>\n" a cada 20ms
+ * Saida USB CDC SerialUSB: "E:<count> B:<0|1>\n" a cada 20ms
  *
  * Pinout Octopus v1.1 endstops:
  *   STOP_0 = PG6   -> Encoder A
@@ -49,7 +49,7 @@ void encoderISR() {
 }
 
 void setup() {
-    Serial.begin(115200);
+    SerialUSB.begin(115200);
 
     pinMode(ENC_A, INPUT_PULLUP);
     pinMode(ENC_B, INPUT_PULLUP);
@@ -78,10 +78,10 @@ void loop() {
 
         uint8_t btn = !digitalRead(BTN);  // Pull-up: LOW=pressionado
 
-        Serial.print("E:");
-        Serial.print(count);
-        Serial.print(" B:");
-        Serial.println(btn);
+        SerialUSB.print("E:");
+        SerialUSB.print(count);
+        SerialUSB.print(" B:");
+        SerialUSB.println(btn);
 
         // Heartbeat LED a cada 500ms
         static uint8_t tick = 0;

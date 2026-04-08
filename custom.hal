@@ -17,7 +17,7 @@
 #   Chaves ligam pino ao GND quando ativadas (pull-up interno)
 
 # --- Componentes ---
-loadrt encoder num_chan=1
+loadrt encoder num_chan=2
 loadrt not names=not.0,not.axis-sel,not.mode-auto,not.mode-mdi,not.interlock
 loadrt and2 names=and2.jog-x,and2.jog-z,and2.mode-jog,and2.interlock,and2.cycle-start,and2.cycle-run,and2.cycle-resume,and2.cycle-blocked,and2.estop
 
@@ -156,18 +156,19 @@ net btn-reset halui.estop.reset   <= hm2_7i92.0.gpio.022.in_not
 net btn-reset halui.machine.on
 
 # =============================================
-#  FEED OVERRIDE - Encoder FYSETC via BTT Octopus USB
+#  FEED OVERRIDE - Encoder FYSETC EC11 via Mesa GPIOs
 # =============================================
-# Octopus v1.1 (STM32F446) le encoder EC11 e manda contagem via USB serial
-# Componente Python userspace: feed_encoder.py
-# DESATIVADO ate gravar firmware no Octopus
-# loadusr -W ./feed_encoder.py
-#
-# setp feed-encoder.scale 0.01
-# setp feed-encoder.enable 1
-#
-# net feed-ovr-counts  feed-encoder.counts  => halui.feed-override.counts
-# net feed-ovr-scale   feed-encoder.scale   => halui.feed-override.scale
+# GPIO.016 (P2-13) = Encoder A
+# GPIO.026 (P1-06) = Encoder B
+# Software encoder.1 (encoder.0 = MPG)
 
-# Botao do encoder: reset feed override para 100%
-# (futuro: conectar a halui.feed-override.reset ou logica custom)
+setp encoder.1.x4-mode 1
+setp encoder.1.counter-mode 0
+
+net feed-enc-a encoder.1.phase-A <= hm2_7i92.0.gpio.016.in
+net feed-enc-b encoder.1.phase-B <= hm2_7i92.0.gpio.026.in
+
+# Escala: 0.01 = 1% por click
+net feed-ovr-counts  encoder.1.counts       => halui.feed-override.counts
+setp halui.feed-override.scale 0.01
+setp halui.feed-override.count-enable 1
