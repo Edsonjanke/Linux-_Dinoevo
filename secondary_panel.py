@@ -15,12 +15,21 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 
-# Tenta importar linuxcnc, senao usa modo demo
-try:
-    import linuxcnc
-    LIVE = True
-except ImportError:
-    LIVE = False
+# linuxcnc importado sob demanda para nao interferir com ProbeBasic
+linuxcnc = None
+LIVE = False
+
+def _import_linuxcnc():
+    global linuxcnc, LIVE
+    if linuxcnc is not None:
+        return True
+    try:
+        import importlib
+        linuxcnc = importlib.import_module('linuxcnc')
+        LIVE = True
+        return True
+    except ImportError:
+        return False
 
 # -- Cores tema cobre (matching ProbeBasic custom) --
 BG_DARK = "#1a1a1a"
@@ -146,15 +155,7 @@ class SecondaryPanel(QWidget):
         # LinuxCNC connection
         self.stat = None
         self.cmd = None
-        if LIVE:
-            try:
-                self.stat = linuxcnc.stat()
-                self.cmd = linuxcnc.command()
-                self.stat.poll()
-            except linuxcnc.error:
-                self.stat = None
-                self.cmd = None
-
+        self._reconnect_counter = 0
         self.rapid_buttons = []
         self.cycle_start_time = None
         self.cycle_elapsed = 0
@@ -386,15 +387,18 @@ class SecondaryPanel(QWidget):
 
     def _adjust_override(self, delta):
         if self.stat:
-            current = int(self.stat.spindle[0]['override'] * 100)
-            self._set_override(max(0, min(200, current + delta)))
+            try:
+                current = int(self.stat.spindle[0]['override'] * 100)
+                self._set_override(max(0, min(200, current + delta)))
+            except Exception:
+                pass
 
     def _set_override(self, percent):
         self.ovr_value.setText(f"{percent}%")
         if self.cmd:
             try:
                 self.cmd.spindleoverride(percent / 100.0, 0)
-            except linuxcnc.error:
+            except Exception:
                 pass
 
     def _update_spindle_buttons(self, current_pct):
@@ -411,7 +415,7 @@ class SecondaryPanel(QWidget):
         if self.cmd:
             try:
                 self.cmd.rapidrate(percent / 100.0)
-            except linuxcnc.error:
+            except Exception:
                 pass
 
     def _update_rapid_buttons(self, current_pct):
@@ -423,99 +427,168 @@ class SecondaryPanel(QWidget):
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
+    def _linuxcnc_ready(self):
+        """Verifica se milltask E probe_basic estao rodando via /proc."""
+        found_milltask = False
+        found_display = False
+        try:
+            for pid in os.listdir('/proc'):
+                if not pid.isdigit():
+                    continue
+                try:
+                    with open(f'/proc/{pid}/comm', 'r') as f:
+                        comm = f.read().strip()
+                    if comm == 'milltask':
+                        found_milltask = True
+                    if not found_display:
+                        with open(f'/proc/{pid}/cmdline', 'rb') as f:
+                            cmdline = f.read().decode('utf-8', errors='ignore')
+                        if 'probe_basic_lathe' in cmdline:
+                            found_display = True
+                except (IOError, OSError):
+                    continue
+                if found_milltask and found_display:
+                    return True
+            return False
+        except Exception:
+            return False
+
+    def _try_reconnect(self):
+        """Tenta criar conexao com LinuxCNC. So conecta se tudo estiver pronto."""
+        if not self._linuxcnc_ready():
+            return
+        if not _import_linuxcnc():
+            return
+        try:
+            self.stat = linuxcnc.stat()
+            self.stat.poll()
+            self.cmd = linuxcnc.command()
+            # Reset state ao conectar
+            self.cycle_start_time = None
+            self.cycle_elapsed = 0
+            self._prev_interp_state = None
+            self._gcode_file = ""
+            self._gcode_lines = []
+        except Exception:
+            self.stat = None
+            self.cmd = None
+
     def _update(self):
-        if self.stat:
-            try:
-                self.stat.poll()
-                # DRO - work coordinates = actual - g5x - g92 - tool
-                x = self.stat.actual_position[0]
-                z = self.stat.actual_position[2]
-                g5x = self.stat.g5x_offset
-                g92 = self.stat.g92_offset
-                tool = self.stat.tool_offset
-                x -= g5x[0] + g92[0] + tool[0]
-                z -= g5x[2] + g92[2] + tool[2]
-                # Lathe: X in diameter (x2) to match ProbeBasic
-                x *= 2
-                self.x_value.setText(f"{x:+09.3f}")
-                self.z_value.setText(f"{z:+09.3f}")
-                # Tool number
-                tool_num = self.stat.tool_in_spindle
-                self.tool_value.setText(f"T{tool_num}")
-                # Feed rate (settings[1] = F value in mm/min)
-                feed = self.stat.settings[1]
-                self.feed_value.setText(f"{feed:.0f}")
-                # Spindle override
-                ovr = int(self.stat.spindle[0]['override'] * 100)
-                self.ovr_value.setText(f"{ovr}%")
-                self._update_spindle_buttons(ovr)
-                # Cycle time (interp_state: 1=reading, 2=paused, 3=waiting)
-                interp = self.stat.interp_state
-                if interp == linuxcnc.INTERP_READING and self._prev_interp_state != linuxcnc.INTERP_READING:
-                    # Programa comecou ou retomou
-                    if self.cycle_start_time is None:
-                        self.cycle_start_time = time.time()
-                        self.cycle_elapsed = 0
-                elif interp == linuxcnc.INTERP_IDLE and self._prev_interp_state != linuxcnc.INTERP_IDLE:
-                    # Programa terminou
-                    if self.cycle_start_time is not None:
-                        self.cycle_elapsed = time.time() - self.cycle_start_time
-                        self.cycle_start_time = None
-                self._prev_interp_state = interp
+        if self.stat is None:
+            # Sem conexao - tenta reconectar a cada 2s (20 ciclos de 100ms)
+            self._reconnect_counter += 1
+            if self._reconnect_counter >= 20:
+                self._reconnect_counter = 0
+                self._try_reconnect()
+            return
 
-                if self.cycle_start_time is not None:
-                    elapsed = time.time() - self.cycle_start_time
-                else:
-                    elapsed = self.cycle_elapsed
-                mins = int(elapsed) // 60
-                secs = int(elapsed) % 60
-                self.cycle_value.setText(f"{mins:02d}:{secs:02d}")
-
-                # G-code viewer
-                gcode_file = self.stat.file
-                if gcode_file and gcode_file != self._gcode_file:
-                    try:
-                        with open(gcode_file, 'r') as f:
-                            self._gcode_lines = f.readlines()
-                        self._gcode_file = gcode_file
-                    except Exception:
-                        self._gcode_lines = []
-                if gcode_file and self._gcode_lines:
-                    # motion_line = linha em execucao real
-                    line = self.stat.motion_line if interp != linuxcnc.INTERP_IDLE else 0
-                    idx = max(0, line - 1)
-                    start = max(0, idx - 5)
-                    end = min(len(self._gcode_lines), idx + 6)
-                    display = []
-                    for i in range(start, end):
-                        num = i + 1
-                        txt = self._gcode_lines[i].rstrip()[:40]
-                        if i == idx and line > 0:
-                            display.append(f'<span style="color:{COPPER_LIGHT};">{num:4d}▸ {txt}</span>')
-                        else:
-                            display.append(f'{num:4d}  {txt}')
-                    self.gcode_label.setText('<pre>' + '\n'.join(display) + '</pre>')
-                else:
-                    self.gcode_label.setText("")
-
-                # Rapid override
-                rapid_pct = int(self.stat.rapidrate * 100)
-                self.rapid_value_label.setText(f"{rapid_pct}%")
-                self._update_rapid_buttons(rapid_pct)
-            except Exception:
-                # Conexao perdida - volta para modo reconexao
+        # Verifica se LinuxCNC ainda esta rodando a cada 2s
+        self._reconnect_counter += 1
+        if self._reconnect_counter >= 20:
+            self._reconnect_counter = 0
+            if not self._linuxcnc_ready():
                 self.stat = None
                 self.cmd = None
-        else:
-            # Sem conexao - tenta conectar ao LinuxCNC
-            if LIVE:
+                self._reset_display()
+                return
+
+        try:
+            self.stat.poll()
+
+            # DRO - work coordinates = actual - g5x - g92 - tool
+            x = self.stat.actual_position[0]
+            z = self.stat.actual_position[2]
+            g5x = self.stat.g5x_offset
+            g92 = self.stat.g92_offset
+            tool = self.stat.tool_offset
+            x -= g5x[0] + g92[0] + tool[0]
+            z -= g5x[2] + g92[2] + tool[2]
+            # Lathe: X in diameter (x2) to match ProbeBasic
+            x *= 2
+            self.x_value.setText(f"{x:+09.3f}")
+            self.z_value.setText(f"{z:+09.3f}")
+            # Tool number
+            tool_num = self.stat.tool_in_spindle
+            self.tool_value.setText(f"T{tool_num}")
+            # Feed rate (settings[1] = F value in mm/min)
+            feed = self.stat.settings[1]
+            self.feed_value.setText(f"{feed:.0f}")
+            # Spindle override
+            ovr = int(self.stat.spindle[0]['override'] * 100)
+            self.ovr_value.setText(f"{ovr}%")
+            self._update_spindle_buttons(ovr)
+            # Cycle time (interp_state: 1=reading, 2=paused, 3=waiting)
+            interp = self.stat.interp_state
+            if interp == linuxcnc.INTERP_READING and self._prev_interp_state != linuxcnc.INTERP_READING:
+                if self.cycle_start_time is None:
+                    self.cycle_start_time = time.time()
+                    self.cycle_elapsed = 0
+            elif interp == linuxcnc.INTERP_IDLE and self._prev_interp_state != linuxcnc.INTERP_IDLE:
+                if self.cycle_start_time is not None:
+                    self.cycle_elapsed = time.time() - self.cycle_start_time
+                    self.cycle_start_time = None
+            self._prev_interp_state = interp
+
+            if self.cycle_start_time is not None:
+                elapsed = time.time() - self.cycle_start_time
+            else:
+                elapsed = self.cycle_elapsed
+            mins = int(elapsed) // 60
+            secs = int(elapsed) % 60
+            self.cycle_value.setText(f"{mins:02d}:{secs:02d}")
+
+            # G-code viewer
+            gcode_file = self.stat.file
+            if gcode_file and gcode_file != self._gcode_file:
                 try:
-                    self.stat = linuxcnc.stat()
-                    self.cmd = linuxcnc.command()
-                    self.stat.poll()
+                    with open(gcode_file, 'r') as f:
+                        self._gcode_lines = f.readlines()
+                    self._gcode_file = gcode_file
                 except Exception:
-                    self.stat = None
-                    self.cmd = None
+                    self._gcode_lines = []
+            if gcode_file and self._gcode_lines:
+                line = self.stat.motion_line if interp != linuxcnc.INTERP_IDLE else 0
+                idx = max(0, line - 1)
+                start = max(0, idx - 5)
+                end = min(len(self._gcode_lines), idx + 6)
+                display = []
+                for i in range(start, end):
+                    num = i + 1
+                    txt = self._gcode_lines[i].rstrip()[:40]
+                    if i == idx and line > 0:
+                        display.append(f'<span style="color:{COPPER_LIGHT};">{num:4d}▸ {txt}</span>')
+                    else:
+                        display.append(f'{num:4d}  {txt}')
+                self.gcode_label.setText('<pre>' + '\n'.join(display) + '</pre>')
+            else:
+                self.gcode_label.setText("")
+
+            # Rapid override
+            rapid_pct = int(self.stat.rapidrate * 100)
+            self.rapid_value_label.setText(f"{rapid_pct}%")
+            self._update_rapid_buttons(rapid_pct)
+
+        except Exception:
+            # Conexao perdida
+            self.stat = None
+            self.cmd = None
+            self._reconnect_counter = 0
+            self._reset_display()
+
+    def _reset_display(self):
+        self.x_value.setText("+000.000")
+        self.z_value.setText("+000.000")
+        self.tool_value.setText("T0")
+        self.feed_value.setText("0")
+        self.cycle_value.setText("00:00")
+        self.ovr_value.setText("--")
+        self.rapid_value_label.setText("--")
+        self.gcode_label.setText("")
+        self.cycle_start_time = None
+        self.cycle_elapsed = 0
+        self._prev_interp_state = None
+        self._gcode_file = ""
+        self._gcode_lines = []
 
 
 def main():
