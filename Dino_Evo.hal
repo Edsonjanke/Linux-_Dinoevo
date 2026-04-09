@@ -7,7 +7,7 @@ loadrt [KINS]KINEMATICS
 loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[KINS]JOINTS
 loadrt hostmot2
 loadrt hm2_eth board_ip="10.10.10.10" config="num_encoders=1 num_pwmgens=3 num_stepgens=5"
-setp    hm2_7i92.0.pwmgen.pwm_frequency 20000
+setp    hm2_7i92.0.pwmgen.pwm_frequency 500
 setp    hm2_7i92.0.pwmgen.pdm_frequency 6000000
 setp    hm2_7i92.0.watchdog.timeout_ns 5000000
 loadrt pid names=pid.x,pid.z,pid.s
@@ -215,18 +215,24 @@ net spindle-at-speed        <= near.spindle.out
 
 # --- Spindle PWM output ---
 setp hm2_7i92.0.pwmgen.00.output-type 1
-setp hm2_7i92.0.pwmgen.00.scale 2000
+setp hm2_7i92.0.pwmgen.00.scale 1700
 net spindle-output => hm2_7i92.0.pwmgen.00.value
 net spindle-enable => hm2_7i92.0.pwmgen.00.enable
 
-# --- Spindle CW direction output ---
-setp hm2_7i92.0.gpio.013.is_output 1
-net spindle-cw => hm2_7i92.0.gpio.013.out
-
-# --- Coolant flood output ---
+# --- Spindle CW/CCW via PWM1/PWM2 (bornes na placa, 0-10V) ---
+# PWM1 (P2-14) = CW: value fixo no max, enable controla liga/desliga
 setp hm2_7i92.0.pwmgen.01.output-type 1
-setp hm2_7i92.0.pwmgen.01.value 0.5
-net coolant-flood => hm2_7i92.0.pwmgen.01.enable
+setp hm2_7i92.0.pwmgen.01.scale 1
+setp hm2_7i92.0.pwmgen.01.value 1
+net spindle-cw => hm2_7i92.0.pwmgen.01.enable
+# PWM2 (P2-15) = CCW: value fixo no max, enable controla liga/desliga
+setp hm2_7i92.0.pwmgen.02.output-type 1
+setp hm2_7i92.0.pwmgen.02.scale 1
+setp hm2_7i92.0.pwmgen.02.value 1
+net spindle-ccw => hm2_7i92.0.pwmgen.02.enable
+
+# --- Coolant flood output (TODO: mover para outra saida) ---
+# net coolant-flood =>
 
 #******************************
 # connect miscellaneous signals
