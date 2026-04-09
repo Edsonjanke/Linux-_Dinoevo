@@ -309,10 +309,12 @@ class SecondaryPanel(QWidget):
                 self.ovr_slider.setValue(ovr)
                 self.ovr_slider.blockSignals(False)
                 self.ovr_value.setText(f"{ovr}%")
-            except linuxcnc.error:
-                pass
+            except Exception:
+                # Conexao perdida - volta para modo reconexao
+                self.stat = None
+                self.cmd = None
         else:
-            # Demo mode - try reconnecting
+            # Sem conexao - tenta conectar ao LinuxCNC
             if LIVE:
                 try:
                     self.stat = linuxcnc.stat()
