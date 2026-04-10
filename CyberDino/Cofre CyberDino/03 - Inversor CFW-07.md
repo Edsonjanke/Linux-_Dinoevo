@@ -58,10 +58,17 @@
 **Funcao:** Dissipa energia regenerativa durante desaceleracao do motor.
 Sem resistor, tensao DC sobe e causa erro **E01** (sobretensao).
 
+**Parametros frenagem:**
+- P101 = 2.0s (rampa desaceleracao rapida)
+- P300 = 1.5s (frenagem CC no final)
+- P301 = 1.0Hz (freq inicio CC)
+- P302 = 4.0% (tensao CC)
+
 **Cuidados:**
 - Cabo trancado entre inversor e resistor
 - Separar dos cabos de sinal/controle
 - Montar em local ventilado (alta temperatura)
+- Se der E01 na desaceleracao, aumentar P101 para 2.5s ou 3.0s
 
 ## Logica de Controle
 

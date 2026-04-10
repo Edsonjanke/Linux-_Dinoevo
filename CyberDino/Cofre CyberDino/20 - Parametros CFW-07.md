@@ -24,10 +24,17 @@ P204 = 5    (carrega padrao)
 | P227 | Liga/Desliga REMOTO | **1** | Inativo (controlado por DI1) |
 
 ### 4. Rampa
-| Param | Funcao | Valor |
-|-------|--------|-------|
-| P100 | Aceleracao | **3.0** s |
-| P101 | Desaceleracao | **5.0** s |
+| Param | Funcao | Valor | Nota |
+|-------|--------|-------|------|
+| P100 | Aceleracao | **3.0** s | |
+| P101 | Desaceleracao | **2.0** s | Rapida c/ resistor frenagem |
+
+### 4b. Frenagem CC (parada final)
+| Param | Funcao | Valor | Nota |
+|-------|--------|-------|------|
+| P300 | Duracao frenagem CC | **1.5** s | Trava eixo no final |
+| P301 | Freq. inicio frenagem CC | **1.0** Hz | Inicio da injecao CC |
+| P302 | Tensao CC frenagem | **4.0** % | Torque de frenagem (% Vnom) |
 
 ### 5. Ganho entrada analogica
 | Param | Funcao | Valor | Nota |
