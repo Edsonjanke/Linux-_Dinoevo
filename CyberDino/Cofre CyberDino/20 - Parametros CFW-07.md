@@ -29,7 +29,12 @@ P204 = 5    (carrega padrao)
 | P100 | Aceleracao | **3.0** s |
 | P101 | Desaceleracao | **5.0** s |
 
-### 5. Limites de frequencia
+### 5. Ganho entrada analogica
+| Param | Funcao | Valor | Nota |
+|-------|--------|-------|------|
+| P234 | Ganho AI1 | **1.50** | Compensa saida analogica da placa (~6.7V max) |
+
+### 6. Limites de frequencia
 | Param | Funcao | Valor |
 |-------|--------|-------|
 | P133 | Freq minima | **3.0** Hz |

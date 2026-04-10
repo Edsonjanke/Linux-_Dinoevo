@@ -30,6 +30,11 @@
 
 ## CFW-07
 
+### Saida analogica da placa nao chega em 10V
+**Problema:** PWM0 a 100% gera ~6.7V na saida analogica (RC filter da BOB). Inversor recebe 40Hz em vez de 60Hz.
+**Solucao:** P234 (Ganho AI1) = 1.50. Compensa: 6.7V x 1.5 = 10V equivalente = 60Hz = 1700 RPM.
+
+
 ### Motor nao gira mesmo com referencia
 **Verificar:**
 1. DI1 (borne 09) esta em 0V? (Habilita Geral)
