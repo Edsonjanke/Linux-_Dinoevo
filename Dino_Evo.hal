@@ -219,13 +219,15 @@ setp hm2_7i92.0.pwmgen.00.scale 1700
 net spindle-output => hm2_7i92.0.pwmgen.00.value
 net spindle-enable => hm2_7i92.0.pwmgen.00.enable
 
-# --- Spindle CW/CCW via PWM1/PWM2 (bornes na placa, 0-10V) ---
-# PWM1 (P2-14) = CW: value fixo no max, enable controla liga/desliga
+# --- Inversor CFW-07: Enable via PWM1, Direcao via PWM2 ---
+# PWM1 (P2-14) -> Rele 1 NA -> DI1 (borne 09) = Habilita Geral
+# Rele fecha quando spindle liga (M3 ou M4), passa 0V p/ DI1
 setp hm2_7i92.0.pwmgen.01.output-type 1
 setp hm2_7i92.0.pwmgen.01.scale 1
 setp hm2_7i92.0.pwmgen.01.value 1
-net spindle-cw => hm2_7i92.0.pwmgen.01.enable
-# PWM2 (P2-15) = CCW: value fixo no max, enable controla liga/desliga
+net spindle-enable => hm2_7i92.0.pwmgen.01.enable
+# PWM2 (P2-15) -> Rele 2 NA -> DI2 (borne 10) = Sentido de Giro
+# Rele fecha quando M4 (CCW), DI2=0V=anti-horario. Aberto=horario(CW)
 setp hm2_7i92.0.pwmgen.02.output-type 1
 setp hm2_7i92.0.pwmgen.02.scale 1
 setp hm2_7i92.0.pwmgen.02.value 1
