@@ -52,7 +52,7 @@
 |------|-------|
 | **Modelo** | MR-RB51-T (Ling-Yang Precision) |
 | **Tipo** | 3x resistores ceramicos (fio) |
-| **Conexao** | BR (borne 8) e +Ud (borne 9) do X1 |
+| **Conexao** | C → BR (borne 8), P → +Ud (borne 9) |
 | **Min. requerido** | 50W (Tabela 3.3 manual, 16/3AC.380-480) |
 
 **Funcao:** Dissipa energia regenerativa durante desaceleracao do motor.
