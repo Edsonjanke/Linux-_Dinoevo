@@ -15,6 +15,7 @@ loadrt near names=near.spindle
 loadrt abs    names=abs.spindle
 loadrt lowpass names=lowpass.spindle
 loadrt scale  names=scale.spindle
+loadrt timedelay names=timedelay.spindle-enable
 
 addf hm2_7i92.0.read          servo-thread
 addf motion-command-handler   servo-thread
@@ -26,6 +27,7 @@ addf near.spindle             servo-thread
 addf abs.spindle              servo-thread
 addf lowpass.spindle          servo-thread
 addf scale.spindle            servo-thread
+addf timedelay.spindle-enable servo-thread
 addf hm2_7i92.0.write         servo-thread
 setp hm2_7i92.0.dpll.01.timer-us -50
 setp hm2_7i92.0.stepgen.timer-number 1
@@ -219,13 +221,17 @@ setp hm2_7i92.0.pwmgen.00.scale 1700
 net spindle-output => hm2_7i92.0.pwmgen.00.value
 net spindle-enable => hm2_7i92.0.pwmgen.00.enable
 
-# --- Inversor CFW-07: Enable via PWM1, Direcao via PWM2 ---
+# --- Inversor CFW-07: Enable via PWM1 com timer de frenagem ---
 # PWM1 (P2-14) -> Rele 1 NA -> DI1 (borne 09) = Habilita Geral
-# Rele fecha quando spindle liga (M3 ou M4), passa 0V p/ DI1
+# Timer mantem DI1 ativo por 5s apos M5, permitindo rampa + frenagem CC
+setp timedelay.spindle-enable.on-delay  0
+setp timedelay.spindle-enable.off-delay 5
+net spindle-enable => timedelay.spindle-enable.in
+net spindle-enable-delayed timedelay.spindle-enable.out
 setp hm2_7i92.0.pwmgen.01.output-type 1
 setp hm2_7i92.0.pwmgen.01.scale 1
 setp hm2_7i92.0.pwmgen.01.value 1
-net spindle-enable => hm2_7i92.0.pwmgen.01.enable
+net spindle-enable-delayed => hm2_7i92.0.pwmgen.01.enable
 # PWM2 (P2-15) -> Rele 2 NA -> DI2 (borne 10) = Sentido de Giro
 # Rele fecha quando M4 (CCW), DI2=0V=anti-horario. Aberto=horario(CW)
 setp hm2_7i92.0.pwmgen.02.output-type 1

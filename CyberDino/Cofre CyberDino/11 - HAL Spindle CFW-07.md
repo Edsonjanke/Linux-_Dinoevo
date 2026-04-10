@@ -12,8 +12,10 @@ spindle.0.speed-out
 
 spindle.0.on                
   -> spindle-enable         
-    -> pwmgen.01 enable ───── PWM1 ──► Rele1 NA ──► 0V ──────── DI1 (borne 09)
-                                       coil 24V      borne 08
+    -> timedelay (off-delay=5s)
+      -> spindle-enable-delayed
+        -> pwmgen.01 enable ── PWM1 ──► Rele1 NA ──► 0V ─────── DI1 (borne 09)
+                                        coil 24V      borne 08
 
 spindle.0.reverse           
   -> spindle-ccw            
@@ -33,12 +35,17 @@ net spindle-output => hm2_7i92.0.pwmgen.00.value
 net spindle-enable => hm2_7i92.0.pwmgen.00.enable
 ```
 
-### Enable (PWM1 -> Rele -> DI1)
+### Enable com timer de frenagem (PWM1 -> Rele -> DI1)
 ```hal
+# Timer mantem DI1 ativo por 5s apos M5 para rampa + frenagem CC
+setp timedelay.spindle-enable.on-delay  0
+setp timedelay.spindle-enable.off-delay 5
+net spindle-enable => timedelay.spindle-enable.in
+net spindle-enable-delayed timedelay.spindle-enable.out
 setp hm2_7i92.0.pwmgen.01.output-type 1
 setp hm2_7i92.0.pwmgen.01.scale 1
 setp hm2_7i92.0.pwmgen.01.value 1
-net spindle-enable => hm2_7i92.0.pwmgen.01.enable
+net spindle-enable-delayed => hm2_7i92.0.pwmgen.01.enable
 ```
 
 ### Direcao (PWM2 -> Rele -> DI2)
@@ -63,7 +70,7 @@ net spindle-vel-fb-rpm <= hm2_7i92.0.encoder.00.velocity-rpm
 |---------|------|------|------------|------------|
 | M3 S1000 | CW 1000rpm | proporcional | ON (habilitado) | OFF (horario) |
 | M4 S500 | CCW 500rpm | proporcional | ON (habilitado) | ON (anti-horario) |
-| M5 | Parar | 0V | OFF (desabilitado) | OFF |
+| M5 | Parar | 0V | ON 5s (timer frenagem) | OFF |
 
 ## Ver tambem
 - [[03 - Inversor CFW-07]]
