@@ -10,7 +10,8 @@ import os
 import time
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QFrame, QGridLayout
+    QLabel, QPushButton, QFrame, QGridLayout,
+    QStackedWidget, QLineEdit, QListWidget, QListWidgetItem
 )
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
@@ -142,6 +143,74 @@ STYLESHEET = f"""
         font-weight: bold;
         min-height: 42px;
     }}
+    QPushButton#page-btn {{
+        background-color: {COPPER_DIM};
+        color: black;
+        border: 2px solid {COPPER};
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        min-height: 38px;
+    }}
+    QPushButton#page-btn:pressed {{
+        background-color: {COPPER};
+    }}
+    QLineEdit#mdi-entry {{
+        background-color: #111111;
+        color: {TEXT_WHITE};
+        border: 2px solid {COPPER_DIM};
+        border-radius: 6px;
+        font-size: 22px;
+        font-family: "Monospace";
+        padding: 4px 8px;
+        min-height: 36px;
+    }}
+    QLineEdit#mdi-entry:focus {{
+        border-color: {COPPER_LIGHT};
+    }}
+    QListWidget#mdi-history {{
+        background-color: #111111;
+        color: {TEXT_WHITE};
+        border: 2px solid {COPPER_DIM};
+        border-radius: 6px;
+        font-size: 16px;
+        font-family: "Monospace";
+    }}
+    QListWidget#mdi-history::item {{
+        padding: 3px;
+    }}
+    QListWidget#mdi-history::item:selected {{
+        background-color: {COPPER_DIM};
+        color: black;
+    }}
+    QPushButton#kbd-btn {{
+        background-color: {BG_BUTTON};
+        color: {TEXT_WHITE};
+        border: 1px solid {COPPER_DIM};
+        border-radius: 5px;
+        font-size: 18px;
+        font-weight: bold;
+        font-family: "Monospace";
+        min-width: 42px;
+        min-height: 42px;
+    }}
+    QPushButton#kbd-btn:pressed {{
+        background-color: {COPPER_DIM};
+        color: black;
+    }}
+    QPushButton#kbd-action {{
+        background-color: {COPPER_DIM};
+        color: black;
+        border: 1px solid {COPPER};
+        border-radius: 5px;
+        font-size: 14px;
+        font-weight: bold;
+        min-width: 42px;
+        min-height: 42px;
+    }}
+    QPushButton#kbd-action:pressed {{
+        background-color: {COPPER};
+    }}
 """
 
 
@@ -160,6 +229,7 @@ class SecondaryPanel(QWidget):
         self.cycle_start_time = None
         self.cycle_elapsed = 0
         self._prev_interp_state = None
+        self.mdi_history = []
         self._build_ui()
 
         # Update timer - 10Hz
@@ -168,7 +238,27 @@ class SecondaryPanel(QWidget):
         self.timer.start(100)
 
     def _build_ui(self):
-        main = QHBoxLayout(self)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        self.stack = QStackedWidget()
+        root.addWidget(self.stack)
+
+        # Page 0: DRO (existing)
+        dro_page = QWidget()
+        self._build_dro_page(dro_page)
+        self.stack.addWidget(dro_page)
+
+        # Page 1: MDI
+        mdi_page = QWidget()
+        self._build_mdi_page(mdi_page)
+        self.stack.addWidget(mdi_page)
+
+        self.stack.setCurrentIndex(0)
+
+    def _build_dro_page(self, page):
+        main = QHBoxLayout(page)
         main.setContentsMargins(10, 10, 10, 10)
         main.setSpacing(10)
 
@@ -382,8 +472,194 @@ class SecondaryPanel(QWidget):
             self.rapid_buttons.append((pct, btn))
         right_layout.addLayout(rapid_row3)
 
+        # Botao para ir ao MDI
+        btn_mdi = QPushButton("MDI")
+        btn_mdi.setObjectName("page-btn")
+        btn_mdi.clicked.connect(lambda: self.stack.setCurrentIndex(1))
         right_layout.addStretch()
+        right_layout.addWidget(btn_mdi)
         main.addWidget(right_frame, 4)
+
+    # ── MDI Page ──────────────────────────────────────────────────────
+
+    def _build_mdi_page(self, page):
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(6)
+
+        # Titulo
+        title = QLabel("MDI - COMANDO MANUAL")
+        title.setObjectName("title")
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+
+        # Linha de entrada + ENVIAR
+        entry_row = QHBoxLayout()
+        entry_row.setSpacing(6)
+        self.mdi_entry = QLineEdit()
+        self.mdi_entry.setObjectName("mdi-entry")
+        self.mdi_entry.setPlaceholderText("G0 X10 Z-5 ...")
+        self.mdi_entry.returnPressed.connect(self._mdi_submit)
+        entry_row.addWidget(self.mdi_entry, 1)
+
+        btn_send = QPushButton("ENVIAR")
+        btn_send.setObjectName("kbd-action")
+        btn_send.setFixedHeight(44)
+        btn_send.setFixedWidth(80)
+        btn_send.clicked.connect(self._mdi_submit)
+        entry_row.addWidget(btn_send)
+        layout.addLayout(entry_row)
+
+        # Corpo: historico (esq) + teclado (dir)
+        body = QHBoxLayout()
+        body.setSpacing(8)
+
+        # Historico
+        hist_frame = QVBoxLayout()
+        hist_frame.setSpacing(4)
+        hist_label = QLabel("HISTORICO")
+        hist_label.setObjectName("override-label")
+        hist_label.setStyleSheet(f"color: {TEXT_DIM}; font-size: 13px;")
+        hist_label.setAlignment(Qt.AlignCenter)
+        hist_frame.addWidget(hist_label)
+
+        self.mdi_history_list = QListWidget()
+        self.mdi_history_list.setObjectName("mdi-history")
+        self.mdi_history_list.itemDoubleClicked.connect(self._mdi_history_recall)
+        hist_frame.addWidget(self.mdi_history_list, 1)
+
+        # Botoes historico
+        hist_btns = QHBoxLayout()
+        hist_btns.setSpacing(4)
+        btn_rerun = QPushButton("REENVIAR")
+        btn_rerun.setObjectName("kbd-action")
+        btn_rerun.clicked.connect(self._mdi_rerun_selected)
+        hist_btns.addWidget(btn_rerun)
+        btn_clear_hist = QPushButton("LIMPAR")
+        btn_clear_hist.setObjectName("kbd-action")
+        btn_clear_hist.clicked.connect(self._mdi_clear_history)
+        hist_btns.addWidget(btn_clear_hist)
+        hist_frame.addLayout(hist_btns)
+
+        body.addLayout(hist_frame, 3)
+
+        # Teclado touch
+        kbd_frame = QVBoxLayout()
+        kbd_frame.setSpacing(3)
+
+        # Row 1: letras comuns G-code
+        keys_row1 = ["G", "M", "T", "S", "F", "X", "Z"]
+        kbd_frame.addLayout(self._make_kbd_row(keys_row1))
+
+        # Row 2: mais letras + operadores
+        keys_row2 = ["I", "K", "R", "P", "L", "N", "#"]
+        kbd_frame.addLayout(self._make_kbd_row(keys_row2))
+
+        # Row 3: numeros 7-8-9
+        keys_row3 = ["7", "8", "9", "(", ")"]
+        kbd_frame.addLayout(self._make_kbd_row(keys_row3))
+
+        # Row 4: numeros 4-5-6
+        keys_row4 = ["4", "5", "6", "-", "+"]
+        kbd_frame.addLayout(self._make_kbd_row(keys_row4))
+
+        # Row 5: numeros 1-2-3
+        keys_row5 = ["1", "2", "3", ".", "/"]
+        kbd_frame.addLayout(self._make_kbd_row(keys_row5))
+
+        # Row 6: 0, SPACE, BKSP
+        row6 = QHBoxLayout()
+        row6.setSpacing(3)
+        btn_0 = QPushButton("0")
+        btn_0.setObjectName("kbd-btn")
+        btn_0.clicked.connect(lambda: self._mdi_key("0"))
+        row6.addWidget(btn_0)
+
+        btn_space = QPushButton("ESPACO")
+        btn_space.setObjectName("kbd-btn")
+        btn_space.clicked.connect(lambda: self._mdi_key(" "))
+        row6.addWidget(btn_space, 2)
+
+        btn_bksp = QPushButton("\u2190")
+        btn_bksp.setObjectName("kbd-action")
+        btn_bksp.clicked.connect(self._mdi_backspace)
+        row6.addWidget(btn_bksp)
+
+        btn_clr = QPushButton("CLR")
+        btn_clr.setObjectName("kbd-action")
+        btn_clr.clicked.connect(lambda: self.mdi_entry.clear())
+        row6.addWidget(btn_clr)
+        kbd_frame.addLayout(row6)
+
+        body.addLayout(kbd_frame, 4)
+        layout.addLayout(body, 1)
+
+        # Rodape: botao voltar DRO
+        btn_dro = QPushButton("\u25C0  DRO")
+        btn_dro.setObjectName("page-btn")
+        btn_dro.clicked.connect(lambda: self.stack.setCurrentIndex(0))
+        layout.addWidget(btn_dro)
+
+    def _make_kbd_row(self, keys):
+        row = QHBoxLayout()
+        row.setSpacing(3)
+        for k in keys:
+            btn = QPushButton(k)
+            btn.setObjectName("kbd-btn")
+            btn.clicked.connect(lambda _, ch=k: self._mdi_key(ch))
+            row.addWidget(btn)
+        return row
+
+    def _mdi_key(self, char):
+        self.mdi_entry.insert(char)
+        self.mdi_entry.setFocus()
+
+    def _mdi_backspace(self):
+        self.mdi_entry.backspace()
+        self.mdi_entry.setFocus()
+
+    def _mdi_submit(self):
+        cmd_text = self.mdi_entry.text().strip().upper()
+        if not cmd_text:
+            return
+        # Adiciona ao historico visual
+        self.mdi_history.append(cmd_text)
+        self.mdi_history_list.addItem(cmd_text)
+        self.mdi_history_list.scrollToBottom()
+        self.mdi_entry.clear()
+        # Envia ao LinuxCNC
+        self._mdi_send(cmd_text)
+
+    def _mdi_send(self, cmd_text):
+        if not self.cmd or not self.stat:
+            return
+        try:
+            self.stat.poll()
+            # Precisa estar em modo MDI
+            if self.stat.task_mode != linuxcnc.MODE_MDI:
+                self.cmd.mode(linuxcnc.MODE_MDI)
+                self.cmd.wait_complete(1)
+            self.cmd.mdi(cmd_text)
+        except Exception:
+            pass
+
+    def _mdi_history_recall(self, item):
+        """Duplo-clique no historico: copia para entrada."""
+        self.mdi_entry.setText(item.text())
+        self.mdi_entry.setFocus()
+
+    def _mdi_rerun_selected(self):
+        item = self.mdi_history_list.currentItem()
+        if item:
+            cmd_text = item.text()
+            self.mdi_entry.setText(cmd_text)
+            self._mdi_submit()
+
+    def _mdi_clear_history(self):
+        self.mdi_history.clear()
+        self.mdi_history_list.clear()
+
+    # ── Spindle/Rapid Override ───────────────────────────────────────
 
     def _adjust_override(self, delta):
         if self.stat:
