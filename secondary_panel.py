@@ -156,60 +156,112 @@ STYLESHEET = f"""
         background-color: {COPPER};
     }}
     QLineEdit#mdi-entry {{
-        background-color: #111111;
+        background-color: #2a2a2a;
         color: {TEXT_WHITE};
-        border: 2px solid {COPPER_DIM};
-        border-radius: 6px;
-        font-size: 22px;
+        border: 2px solid #555555;
+        border-radius: 4px;
+        font-size: 18px;
         font-family: "Monospace";
         padding: 4px 8px;
-        min-height: 36px;
     }}
     QLineEdit#mdi-entry:focus {{
         border-color: {COPPER_LIGHT};
     }}
     QListWidget#mdi-history {{
-        background-color: #111111;
-        color: {TEXT_WHITE};
-        border: 2px solid {COPPER_DIM};
-        border-radius: 6px;
-        font-size: 16px;
+        background-color: #ffffff;
+        color: #000000;
+        border: 2px solid #555555;
+        border-radius: 4px;
+        font-size: 15px;
         font-family: "Monospace";
     }}
     QListWidget#mdi-history::item {{
-        padding: 3px;
+        padding: 2px 4px;
     }}
     QListWidget#mdi-history::item:selected {{
-        background-color: {COPPER_DIM};
-        color: black;
+        background-color: #3399ff;
+        color: white;
     }}
-    QPushButton#kbd-btn {{
-        background-color: {BG_BUTTON};
-        color: {TEXT_WHITE};
-        border: 1px solid {COPPER_DIM};
-        border-radius: 5px;
+    QPushButton#kbd-letter {{
+        background-color: {COPPER};
+        color: black;
+        border: 1px solid {COPPER_LIGHT};
+        border-radius: 4px;
         font-size: 18px;
         font-weight: bold;
-        font-family: "Monospace";
-        min-width: 42px;
-        min-height: 42px;
+        min-width: 50px;
+        min-height: 50px;
     }}
-    QPushButton#kbd-btn:pressed {{
-        background-color: {COPPER_DIM};
-        color: black;
+    QPushButton#kbd-letter:pressed {{
+        background-color: {COPPER_LIGHT};
     }}
-    QPushButton#kbd-action {{
-        background-color: {COPPER_DIM};
+    QPushButton#kbd-number {{
+        background-color: #e0e0e0;
         color: black;
-        border: 1px solid {COPPER};
-        border-radius: 5px;
+        border: 1px solid #999999;
+        border-radius: 4px;
+        font-size: 18px;
+        font-weight: bold;
+        min-width: 50px;
+        min-height: 50px;
+    }}
+    QPushButton#kbd-number:pressed {{
+        background-color: #ffffff;
+    }}
+    QPushButton#kbd-minus {{
+        background-color: #cc3333;
+        color: white;
+        border: 1px solid #aa2222;
+        border-radius: 4px;
+        font-size: 18px;
+        font-weight: bold;
+        min-width: 50px;
+        min-height: 50px;
+    }}
+    QPushButton#kbd-minus:pressed {{
+        background-color: #ee4444;
+    }}
+    QPushButton#kbd-dark {{
+        background-color: #333333;
+        color: {TEXT_WHITE};
+        border: 1px solid #555555;
+        border-radius: 4px;
+        font-size: 15px;
+        font-weight: bold;
+        min-height: 50px;
+    }}
+    QPushButton#kbd-dark:pressed {{
+        background-color: #555555;
+    }}
+    QPushButton#mdi-action {{
+        background-color: #333333;
+        color: {TEXT_WHITE};
+        border: 1px solid #555555;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+    }}
+    QPushButton#mdi-action:pressed {{
+        background-color: #555555;
+    }}
+    QPushButton#page-active {{
+        background-color: {COPPER};
+        color: black;
+        border: 2px solid {COPPER_LIGHT};
+        border-radius: 4px;
         font-size: 14px;
         font-weight: bold;
-        min-width: 42px;
-        min-height: 42px;
     }}
-    QPushButton#kbd-action:pressed {{
-        background-color: {COPPER};
+    QPushButton#page-inactive {{
+        background-color: #333333;
+        color: {TEXT_WHITE};
+        border: 2px solid #555555;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: bold;
+    }}
+    QPushButton#page-inactive:pressed {{
+        background-color: #555555;
     }}
 """
 
@@ -480,135 +532,151 @@ class SecondaryPanel(QWidget):
         right_layout.addWidget(btn_mdi)
         main.addWidget(right_frame, 4)
 
-    # ── MDI Page ──────────────────────────────────────────────────────
+    # ── MDI Page (ProbeBasic style) ─────────────────────────────────
 
     def _build_mdi_page(self, page):
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(6)
+        outer = QVBoxLayout(page)
+        outer.setContentsMargins(4, 4, 4, 4)
+        outer.setSpacing(3)
 
-        # Titulo
-        title = QLabel("MDI - COMANDO MANUAL")
-        title.setObjectName("title")
-        title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title)
-
-        # Linha de entrada + ENVIAR
-        entry_row = QHBoxLayout()
-        entry_row.setSpacing(6)
-        self.mdi_entry = QLineEdit()
-        self.mdi_entry.setObjectName("mdi-entry")
-        self.mdi_entry.setPlaceholderText("G0 X10 Z-5 ...")
-        self.mdi_entry.returnPressed.connect(self._mdi_submit)
-        entry_row.addWidget(self.mdi_entry, 1)
-
-        btn_send = QPushButton("ENVIAR")
-        btn_send.setObjectName("kbd-action")
-        btn_send.setFixedHeight(44)
-        btn_send.setFixedWidth(80)
-        btn_send.clicked.connect(self._mdi_submit)
-        entry_row.addWidget(btn_send)
-        layout.addLayout(entry_row)
-
-        # Corpo: historico (esq) + teclado (dir)
+        # Body: history (left) + keyboard (right)
         body = QHBoxLayout()
-        body.setSpacing(8)
+        body.setSpacing(4)
 
-        # Historico
-        hist_frame = QVBoxLayout()
-        hist_frame.setSpacing(4)
-        hist_label = QLabel("HISTORICO")
-        hist_label.setObjectName("override-label")
-        hist_label.setStyleSheet(f"color: {TEXT_DIM}; font-size: 13px;")
-        hist_label.setAlignment(Qt.AlignCenter)
-        hist_frame.addWidget(hist_label)
+        # === LEFT: History + action buttons ===
+        left = QVBoxLayout()
+        left.setSpacing(4)
 
         self.mdi_history_list = QListWidget()
         self.mdi_history_list.setObjectName("mdi-history")
         self.mdi_history_list.itemDoubleClicked.connect(self._mdi_history_recall)
-        hist_frame.addWidget(self.mdi_history_list, 1)
+        left.addWidget(self.mdi_history_list, 1)
 
-        # Botoes historico
-        hist_btns = QHBoxLayout()
-        hist_btns.setSpacing(4)
-        btn_rerun = QPushButton("REENVIAR")
-        btn_rerun.setObjectName("kbd-action")
-        btn_rerun.clicked.connect(self._mdi_rerun_selected)
-        hist_btns.addWidget(btn_rerun)
-        btn_clear_hist = QPushButton("LIMPAR")
-        btn_clear_hist.setObjectName("kbd-action")
-        btn_clear_hist.clicked.connect(self._mdi_clear_history)
-        hist_btns.addWidget(btn_clear_hist)
-        hist_frame.addLayout(hist_btns)
+        # Action row 1: DEL SEL, DEL ALL, CLR QUE, PAUSE, ▲
+        act1 = QHBoxLayout()
+        act1.setSpacing(3)
+        for text, slot in [
+            ("DEL SEL", self._mdi_del_selected),
+            ("DEL ALL", self._mdi_clear_history),
+            ("CLR QUE", self._mdi_clear_history),
+            ("PAUSE", None),
+        ]:
+            btn = QPushButton(text)
+            btn.setObjectName("mdi-action")
+            btn.setFixedHeight(34)
+            if slot:
+                btn.clicked.connect(slot)
+            act1.addWidget(btn)
+        btn_up = QPushButton("\u25B2")
+        btn_up.setObjectName("mdi-action")
+        btn_up.setFixedHeight(34)
+        btn_up.setFixedWidth(34)
+        btn_up.clicked.connect(self._mdi_history_up)
+        act1.addWidget(btn_up)
+        left.addLayout(act1)
 
-        body.addLayout(hist_frame, 3)
+        # Action row 2: RUN FROM, RUN SEL, GCODE, ▼
+        act2 = QHBoxLayout()
+        act2.setSpacing(3)
+        for text, slot in [
+            ("RUN FROM", self._mdi_run_from),
+            ("RUN SEL", self._mdi_rerun_selected),
+            ("GCODE", None),
+        ]:
+            btn = QPushButton(text)
+            btn.setObjectName("mdi-action")
+            btn.setFixedHeight(34)
+            if slot:
+                btn.clicked.connect(slot)
+            act2.addWidget(btn)
+        btn_down = QPushButton("\u25BC")
+        btn_down.setObjectName("mdi-action")
+        btn_down.setFixedHeight(34)
+        btn_down.setFixedWidth(34)
+        btn_down.clicked.connect(self._mdi_history_down)
+        act2.addWidget(btn_down)
+        left.addLayout(act2)
 
-        # Teclado touch
-        kbd_frame = QVBoxLayout()
-        kbd_frame.setSpacing(3)
+        body.addLayout(left, 3)
 
-        # Row 1: letras comuns G-code
-        keys_row1 = ["G", "M", "T", "S", "F", "X", "Z"]
-        kbd_frame.addLayout(self._make_kbd_row(keys_row1))
+        # === RIGHT: Keyboard grid 5 cols ===
+        kbd = QGridLayout()
+        kbd.setSpacing(3)
 
-        # Row 2: mais letras + operadores
-        keys_row2 = ["I", "K", "R", "P", "L", "N", "#"]
-        kbd_frame.addLayout(self._make_kbd_row(keys_row2))
+        keys = [
+            (0, 0, "I", "L"), (0, 1, "J", "L"), (0, 2, "K", "L"), (0, 3, "D", "L"), (0, 4, "R", "L"),
+            (1, 0, "X", "L"), (1, 1, "Y", "L"), (1, 2, "Z", "L"), (1, 3, "A", "L"), (1, 4, "B", "L"),
+            (2, 0, "G", "L"), (2, 1, "7", "N"), (2, 2, "8", "N"), (2, 3, "9", "N"), (2, 4, "F", "L"),
+            (3, 0, "M", "L"), (3, 1, "4", "N"), (3, 2, "5", "N"), (3, 3, "6", "N"), (3, 4, "S", "L"),
+            (4, 0, "T", "L"), (4, 1, "1", "N"), (4, 2, "2", "N"), (4, 3, "3", "N"), (4, 4, "H", "L"),
+            (5, 0, "O", "L"), (5, 1, "-", "M"), (5, 2, "0", "N"), (5, 3, ".", "N"), (5, 4, "P", "L"),
+            (6, 0, "L", "L"), (6, 4, "Q", "L"),
+        ]
 
-        # Row 3: numeros 7-8-9
-        keys_row3 = ["7", "8", "9", "(", ")"]
-        kbd_frame.addLayout(self._make_kbd_row(keys_row3))
+        for row, col, text, ktype in keys:
+            btn = QPushButton(text)
+            style = {"L": "kbd-letter", "N": "kbd-number", "M": "kbd-minus"}[ktype]
+            btn.setObjectName(style)
+            btn.clicked.connect(lambda _, ch=text: self._mdi_key(ch))
+            kbd.addWidget(btn, row, col)
 
-        # Row 4: numeros 4-5-6
-        keys_row4 = ["4", "5", "6", "-", "+"]
-        kbd_frame.addLayout(self._make_kbd_row(keys_row4))
-
-        # Row 5: numeros 1-2-3
-        keys_row5 = ["1", "2", "3", ".", "/"]
-        kbd_frame.addLayout(self._make_kbd_row(keys_row5))
-
-        # Row 6: 0, SPACE, BKSP
-        row6 = QHBoxLayout()
-        row6.setSpacing(3)
-        btn_0 = QPushButton("0")
-        btn_0.setObjectName("kbd-btn")
-        btn_0.clicked.connect(lambda: self._mdi_key("0"))
-        row6.addWidget(btn_0)
-
-        btn_space = QPushButton("ESPACO")
-        btn_space.setObjectName("kbd-btn")
-        btn_space.clicked.connect(lambda: self._mdi_key(" "))
-        row6.addWidget(btn_space, 2)
-
-        btn_bksp = QPushButton("\u2190")
-        btn_bksp.setObjectName("kbd-action")
+        # Row 6 special: ⌫ (col1), SPACE (col2-3)
+        btn_bksp = QPushButton("\u232B")
+        btn_bksp.setObjectName("kbd-dark")
         btn_bksp.clicked.connect(self._mdi_backspace)
-        row6.addWidget(btn_bksp)
+        kbd.addWidget(btn_bksp, 6, 1)
 
-        btn_clr = QPushButton("CLR")
-        btn_clr.setObjectName("kbd-action")
-        btn_clr.clicked.connect(lambda: self.mdi_entry.clear())
-        row6.addWidget(btn_clr)
-        kbd_frame.addLayout(row6)
+        btn_space = QPushButton("SPACE")
+        btn_space.setObjectName("kbd-dark")
+        btn_space.clicked.connect(lambda: self._mdi_key(" "))
+        kbd.addWidget(btn_space, 6, 2, 1, 2)
 
-        body.addLayout(kbd_frame, 4)
-        layout.addLayout(body, 1)
+        # Row 7: ◄  ►  ENTER(span3)
+        btn_left = QPushButton("\u25C4")
+        btn_left.setObjectName("kbd-dark")
+        btn_left.clicked.connect(self._mdi_cursor_left)
+        kbd.addWidget(btn_left, 7, 0)
 
-        # Rodape: botao voltar DRO
-        btn_dro = QPushButton("\u25C0  DRO")
-        btn_dro.setObjectName("page-btn")
+        btn_right = QPushButton("\u25BA")
+        btn_right.setObjectName("kbd-dark")
+        btn_right.clicked.connect(self._mdi_cursor_right)
+        kbd.addWidget(btn_right, 7, 1)
+
+        btn_enter = QPushButton("ENTER")
+        btn_enter.setObjectName("kbd-dark")
+        btn_enter.clicked.connect(self._mdi_submit)
+        kbd.addWidget(btn_enter, 7, 2, 1, 3)
+
+        body.addLayout(kbd, 7)
+        outer.addLayout(body, 1)
+
+        # === BOTTOM BAR: MDI entry + DRO/MDI buttons ===
+        bottom = QHBoxLayout()
+        bottom.setSpacing(6)
+
+        self.mdi_entry = QLineEdit()
+        self.mdi_entry.setObjectName("mdi-entry")
+        self.mdi_entry.setPlaceholderText("MDI")
+        self.mdi_entry.setFixedHeight(34)
+        self.mdi_entry.returnPressed.connect(self._mdi_submit)
+        bottom.addWidget(self.mdi_entry, 1)
+
+        btn_dro = QPushButton("DRO")
+        btn_dro.setObjectName("page-inactive")
+        btn_dro.setFixedHeight(34)
+        btn_dro.setFixedWidth(70)
         btn_dro.clicked.connect(lambda: self.stack.setCurrentIndex(0))
-        layout.addWidget(btn_dro)
+        bottom.addWidget(btn_dro)
 
-    def _make_kbd_row(self, keys):
-        row = QHBoxLayout()
-        row.setSpacing(3)
-        for k in keys:
-            btn = QPushButton(k)
-            btn.setObjectName("kbd-btn")
-            btn.clicked.connect(lambda _, ch=k: self._mdi_key(ch))
-            row.addWidget(btn)
-        return row
+        btn_mdi_page = QPushButton("MDI")
+        btn_mdi_page.setObjectName("page-active")
+        btn_mdi_page.setFixedHeight(34)
+        btn_mdi_page.setFixedWidth(70)
+        bottom.addWidget(btn_mdi_page)
+
+        outer.addLayout(bottom)
+
+    # ── MDI Logic ────────────────────────────────────────────────────
 
     def _mdi_key(self, char):
         self.mdi_entry.insert(char)
@@ -618,16 +686,24 @@ class SecondaryPanel(QWidget):
         self.mdi_entry.backspace()
         self.mdi_entry.setFocus()
 
+    def _mdi_cursor_left(self):
+        pos = self.mdi_entry.cursorPosition()
+        self.mdi_entry.setCursorPosition(max(0, pos - 1))
+        self.mdi_entry.setFocus()
+
+    def _mdi_cursor_right(self):
+        pos = self.mdi_entry.cursorPosition()
+        self.mdi_entry.setCursorPosition(pos + 1)
+        self.mdi_entry.setFocus()
+
     def _mdi_submit(self):
         cmd_text = self.mdi_entry.text().strip().upper()
         if not cmd_text:
             return
-        # Adiciona ao historico visual
         self.mdi_history.append(cmd_text)
         self.mdi_history_list.addItem(cmd_text)
         self.mdi_history_list.scrollToBottom()
         self.mdi_entry.clear()
-        # Envia ao LinuxCNC
         self._mdi_send(cmd_text)
 
     def _mdi_send(self, cmd_text):
@@ -635,7 +711,6 @@ class SecondaryPanel(QWidget):
             return
         try:
             self.stat.poll()
-            # Precisa estar em modo MDI
             if self.stat.task_mode != linuxcnc.MODE_MDI:
                 self.cmd.mode(linuxcnc.MODE_MDI)
                 self.cmd.wait_complete(1)
@@ -644,20 +719,43 @@ class SecondaryPanel(QWidget):
             pass
 
     def _mdi_history_recall(self, item):
-        """Duplo-clique no historico: copia para entrada."""
         self.mdi_entry.setText(item.text())
         self.mdi_entry.setFocus()
 
     def _mdi_rerun_selected(self):
         item = self.mdi_history_list.currentItem()
         if item:
-            cmd_text = item.text()
-            self.mdi_entry.setText(cmd_text)
-            self._mdi_submit()
+            self._mdi_send(item.text())
+
+    def _mdi_run_from(self):
+        row = self.mdi_history_list.currentRow()
+        if row < 0:
+            return
+        for i in range(row, self.mdi_history_list.count()):
+            item = self.mdi_history_list.item(i)
+            if item:
+                self._mdi_send(item.text())
+
+    def _mdi_del_selected(self):
+        row = self.mdi_history_list.currentRow()
+        if row >= 0:
+            self.mdi_history_list.takeItem(row)
+            if row < len(self.mdi_history):
+                self.mdi_history.pop(row)
 
     def _mdi_clear_history(self):
         self.mdi_history.clear()
         self.mdi_history_list.clear()
+
+    def _mdi_history_up(self):
+        row = self.mdi_history_list.currentRow()
+        if row > 0:
+            self.mdi_history_list.setCurrentRow(row - 1)
+
+    def _mdi_history_down(self):
+        row = self.mdi_history_list.currentRow()
+        if row < self.mdi_history_list.count() - 1:
+            self.mdi_history_list.setCurrentRow(row + 1)
 
     # ── Spindle/Rapid Override ───────────────────────────────────────
 

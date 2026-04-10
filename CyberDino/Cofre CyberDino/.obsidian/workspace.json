@@ -11,13 +11,14 @@
             "id": "5f894c8616263d01",
             "type": "leaf",
             "state": {
-              "type": "bases",
+              "type": "markdown",
               "state": {
-                "file": "Sem título.base",
-                "viewName": "Tabela"
+                "file": "13 - Painel Secundario Pi 3B+.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "lucide-table",
-              "title": "Sem título"
+              "icon": "lucide-file",
+              "title": "13 - Painel Secundario Pi 3B+"
             }
           }
         ]
@@ -184,7 +185,12 @@
   },
   "active": "5f894c8616263d01",
   "lastOpenFiles": [
+    "13 - Painel Secundario Pi 3B+.md.tmp.3327.1775850349404",
     "Sem título.base",
+    "13 - Painel Secundario Pi 3B+.md.tmp.3327.1775850343891",
+    "20 - Parametros CFW-07.md",
+    "11 - HAL Spindle CFW-07.md",
+    "07 - Chave Seletora de Modo.md",
     "23 - Erros e Solucoes.md",
     "23 - Erros e Solucoes.md.tmp.2279.1775824781566",
     "22 - Fiacao Completa.md",
@@ -193,7 +199,6 @@
     "21 - Pinout Conector XC1.md.tmp.2279.1775824735301",
     "02 - Mapeamento GPIOs e Pinos.md",
     "01 - Mesa 7i92 Placa Chinesa.md",
-    "20 - Parametros CFW-07.md",
     "20 - Parametros CFW-07.md.tmp.2279.1775824719856"
   ]
 }
