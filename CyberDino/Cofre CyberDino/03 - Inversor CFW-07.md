@@ -43,7 +43,25 @@
 | R, S, T | Entrada 380V trifasica |
 | U, V, W | Saida motor trifasico |
 | PE | Terra de protecao |
-| BR, +Ud | Resistor de frenagem (opcional) |
+| BR (8) | Resistor de frenagem (-) |
+| +Ud (9) | Resistor de frenagem (+) / barramento DC |
+
+## Resistor de Frenagem
+
+| Dado | Valor |
+|------|-------|
+| **Modelo** | MR-RB51-T (Ling-Yang Precision) |
+| **Tipo** | 3x resistores ceramicos (fio) |
+| **Conexao** | BR (borne 8) e +Ud (borne 9) do X1 |
+| **Min. requerido** | 50W (Tabela 3.3 manual, 16/3AC.380-480) |
+
+**Funcao:** Dissipa energia regenerativa durante desaceleracao do motor.
+Sem resistor, tensao DC sobe e causa erro **E01** (sobretensao).
+
+**Cuidados:**
+- Cabo trancado entre inversor e resistor
+- Separar dos cabos de sinal/controle
+- Montar em local ventilado (alta temperatura)
 
 ## Logica de Controle
 

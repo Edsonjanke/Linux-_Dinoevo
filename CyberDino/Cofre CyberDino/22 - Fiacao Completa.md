@@ -29,6 +29,15 @@ Rede 380V 3~ ──── Disjuntor ──── R(1), S(2), T(3) do X1
                                   PE ──── Terra protecao
 ```
 
+## Resistor de Frenagem (MR-RB51-T -> CFW-07)
+
+```
+MR-RB51-T                       CFW-07 (X1)
+===========                      ===========
+Terminal 1 ──── cabo trancado ──── BR  (borne 8)
+Terminal 2 ──── cabo trancado ──── +Ud (borne 9)
+```
+
 ## E-Stop
 
 ```
