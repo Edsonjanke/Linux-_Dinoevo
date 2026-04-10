@@ -389,7 +389,7 @@ class SecondaryPanel(QWidget):
         if self.stat:
             try:
                 current = int(self.stat.spindle[0]['override'] * 100)
-                self._set_override(max(0, min(200, current + delta)))
+                self._set_override(max(10, min(200, current + delta)))
             except Exception:
                 pass
 
