@@ -172,3 +172,14 @@ net feed-enc-b encoder.1.phase-B <= hm2_7i92.0.gpio.026.in
 net feed-ovr-counts  encoder.1.counts       => halui.feed-override.counts
 setp halui.feed-override.scale 0.01
 setp halui.feed-override.count-enable 1
+
+# =============================================
+#  FIM DE CURSO - Chave compartilhada X e Z
+# =============================================
+# GPIO.014 = Fim de curso NF (serie) - usado apenas como HOME
+# Limites de curso protegidos por software (MIN_LIMIT/MAX_LIMIT no INI)
+# Normal: chaves fechadas -> GND -> .in=FALSE = OK
+# Home: chave abre -> pull-up -> .in=TRUE = posicao home
+net home-shared <= hm2_7i92.0.gpio.014.in
+net home-shared => joint.0.home-sw-in
+net home-shared => joint.1.home-sw-in

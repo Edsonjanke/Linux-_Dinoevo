@@ -1,13 +1,13 @@
 # Painel Secundario - Raspberry Pi 3B+
 
 ## Hardware
-| Componente | Detalhe |
-|------------|---------|
-| **Pi** | Raspberry Pi 3B+ |
-| **IP WiFi** | 192.168.0.103 (hostname: cyberdino) |
-| **Tela** | BTT PITFT70, DSI, **800x480** (nao 1024x600!) |
-| **Touch** | Capacitivo USB |
-| **PC LinuxCNC** | 192.168.0.113 |
+| Componente      | Detalhe                                       |
+| --------------- | --------------------------------------------- |
+| **Pi**          | Raspberry Pi 3B+                              |
+| **IP WiFi**     | 192.168.0.103 (hostname: cyberdino)           |
+| **Tela**        | BTT PITFT70, DSI, **800x480** (nao 1024x600!) |
+| **Touch**       | Capacitivo USB                                |
+| **PC LinuxCNC** | 192.168.0.113                                 |
 
 ## Arquitetura
 ```

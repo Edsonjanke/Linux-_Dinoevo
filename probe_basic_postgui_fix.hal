@@ -26,3 +26,11 @@ net mpg-enabled => qtpyvcp.mpg-indicator.in
 
 # --- Aviso botao fisico: cycle-start fora de AUTO mostra mensagem na tela ---
 net cycle-blocked => qtpyvcp.cycle-start-button.blocked
+
+# ############################################################################
+# AMS32 - PLC Modbus ASCII via Python (coolant)
+# ############################################################################
+loadusr -Wn ams32 python3 ams32_hal.py
+
+# Coolant M8/M9 -> PLC M100 -> Y0 (bomba)
+net coolant-flood    => ams32.cmd.00

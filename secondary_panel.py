@@ -969,7 +969,14 @@ def main():
     app = QApplication(sys.argv)
     app.setOverrideCursor(Qt.BlankCursor)  # Hide mouse cursor (touch only)
     panel = SecondaryPanel()
-    panel.showFullScreen()
+    # Fullscreen apenas no display virtual (Xvfb :1 = 800x480)
+    # No display principal (:0), mostra janela 800x480 sem decoracao
+    screen = app.primaryScreen().size()
+    if screen.width() == 800 and screen.height() == 480:
+        panel.showFullScreen()
+    else:
+        panel.setWindowFlags(panel.windowFlags() | Qt.FramelessWindowHint)
+        panel.show()
     sys.exit(app.exec_())
 
 
