@@ -73,10 +73,17 @@
 ```
 // ============================================================
 // BLOCO 0: Inicializacao (roda 1x no power-on)
-// Seta defaults dos timers de lubrificacao
+// Configura COM1 (RS-232) como Modbus escravo
+// e seta defaults dos timers de lubrificacao
 // M1002 = pulso de primeiro scan
 // ============================================================
 LD    M1002
+// --- COM1 RS-232: Modbus ASCII escravo, 9600, 7E1 ---
+// D1036 = formato COM1: H87 = 9600bps, 7 data, Even parity, 1 stop
+MOV   H87       D1036
+// M1139=OFF = COM1 em modo escravo Modbus (padrao)
+RST   M1139
+// Lubrificacao defaults
 MOV   K50       D110
 MOV   K9000     D111
 

@@ -221,7 +221,7 @@ net spindle-enable => hm2_7i92.0.pwmgen.00.enable
 # PWM1 (P2-14) -> Rele 1 NA -> DI1 (borne 09) = Habilita Geral
 # Timer mantem DI1 ativo por 5s apos M5, permitindo rampa + frenagem CC
 setp timedelay.spindle-enable.on-delay  0
-setp timedelay.spindle-enable.off-delay 5
+setp timedelay.spindle-enable.off-delay 1
 net spindle-enable => timedelay.spindle-enable.in
 net spindle-enable-delayed timedelay.spindle-enable.out
 setp hm2_7i92.0.pwmgen.01.output-type 1
