@@ -3,10 +3,16 @@
 ams32_hal.py - Componente HAL para AMS32 (Delta DVP clone) via Modbus ASCII
 Substitui mb2hal para comunicacao ASCII que o mb2hal nao suporta.
 
-Pins HAL criados (mesmo padrao do mb2hal):
+Pins HAL criados:
   ams32.cmd.00-07       (bit IN)  - Comandos LinuxCNC -> PLC (M100-M107)
   ams32.status.00-15    (bit OUT) - Status PLC -> LinuxCNC (M200-M215)
   ams32.spindle-rpm     (float IN)- RPM para o PLC (D100)
+  ams32.pos-cmd-x       (float IN)- Posicao X atual (para salvar no PLC)
+  ams32.pos-cmd-z       (float IN)- Posicao Z atual (para salvar no PLC)
+  ams32.pos-saved-x     (float OUT)- Posicao X salva no PLC (lida no startup)
+  ams32.pos-saved-z     (float OUT)- Posicao Z salva no PLC (lida no startup)
+  ams32.pos-valid       (bit OUT) - Flag: posicao salva e valida
+  ams32.connected       (bit OUT) - Conexao ativa
   ams32.num-errors      (s32 OUT) - Contador de erros de comunicacao
 
 Uso no HAL:
@@ -16,6 +22,7 @@ Uso no HAL:
 import hal
 import time
 import sys
+import struct
 import logging
 from pymodbus.client import ModbusSerialClient
 from pymodbus.framer import FramerType
@@ -33,15 +40,34 @@ log = logging.getLogger("ams32")
 SERIAL_PORT = "/dev/ttyAMS32"
 BAUDRATE = 9600
 SLAVE_ID = 1
-POLL_RATE = 0.05  # 50ms = 20Hz
+POLL_RATE = 0.20  # 200ms = 5Hz (AMS32 precisa ~100ms entre requests)
+POS_SAVE_INTERVAL = 2.0  # salvar posicao a cada 2 segundos
+POS_VALID_MAGIC = 0xABCD  # valor magico para validar posicao salva
 
 # Enderecos Modbus
 ADDR_CMD    = 2148   # M100-M107 (escrita coils)
 ADDR_STATUS = 2248   # M200-M215 (leitura coils)
 ADDR_RPM    = 4196   # D100 (escrita registro)
+ADDR_POS_X  = 6096   # D2000-D2001 (posicao X, float 32bit)
+ADDR_POS_Z  = 6098   # D2002-D2003 (posicao Z, float 32bit)
+ADDR_POS_OK = 6100   # D2004 (flag validacao = 0xABCD)
 
 NUM_CMD    = 8
 NUM_STATUS = 16
+
+
+def float_to_regs(val):
+    """Converte float para 2 registradores 16bit (big-endian)."""
+    packed = struct.pack('>f', val)
+    hi = (packed[0] << 8) | packed[1]
+    lo = (packed[2] << 8) | packed[3]
+    return [hi, lo]
+
+
+def regs_to_float(hi, lo):
+    """Converte 2 registradores 16bit para float (big-endian)."""
+    packed = struct.pack('>HH', hi, lo)
+    return struct.unpack('>f', packed)[0]
 
 
 def main():
@@ -73,6 +99,13 @@ def main():
         # Pin de conexao ativa
         h.newpin("connected", hal.HAL_BIT, hal.HAL_OUT)
 
+        # Pins de posicao (save/restore)
+        h.newpin("pos-cmd-x", hal.HAL_FLOAT, hal.HAL_IN)
+        h.newpin("pos-cmd-z", hal.HAL_FLOAT, hal.HAL_IN)
+        h.newpin("pos-saved-x", hal.HAL_FLOAT, hal.HAL_OUT)
+        h.newpin("pos-saved-z", hal.HAL_FLOAT, hal.HAL_OUT)
+        h.newpin("pos-valid", hal.HAL_BIT, hal.HAL_OUT)
+
         h.ready()
         log.info("Pins criados, componente ready")
 
@@ -96,6 +129,8 @@ def main():
     connected = False
     last_cmd = [False] * NUM_CMD
     last_rpm = 0.0
+    last_pos_save = 0.0
+    pos_restored = False
 
     log.info(f"Configurado: {SERIAL_PORT} ASCII 9600 7E1")
     print(f"ams32_hal: Iniciando em {SERIAL_PORT} ASCII 9600 7E1, log em {LOG_FILE}")
@@ -120,9 +155,33 @@ def main():
                     time.sleep(1)
                     continue
 
+            # --- 0. Restore posicao salva (1x no startup) ---
+            if not pos_restored:
+                try:
+                    r = client.read_holding_registers(address=ADDR_POS_OK, count=1)
+                    time.sleep(0.05)
+                    if not r.isError() and r.registers[0] == POS_VALID_MAGIC:
+                        r2 = client.read_holding_registers(address=ADDR_POS_X, count=4)
+                        time.sleep(0.05)
+                        if not r2.isError():
+                            saved_x = regs_to_float(r2.registers[0], r2.registers[1])
+                            saved_z = regs_to_float(r2.registers[2], r2.registers[3])
+                            h["pos-saved-x"] = saved_x
+                            h["pos-saved-z"] = saved_z
+                            h["pos-valid"] = True
+                            log.info(f"Posicao restaurada: X={saved_x:.4f} Z={saved_z:.4f}")
+                            print(f"ams32_hal: Posicao salva encontrada: X={saved_x:.4f} Z={saved_z:.4f}")
+                    else:
+                        h["pos-valid"] = False
+                        log.info("Nenhuma posicao salva valida no PLC")
+                        print("ams32_hal: Nenhuma posicao salva no PLC")
+                except Exception:
+                    log.exception("Erro lendo posicao salva")
+                pos_restored = True
+
             # --- 1. Ler status M200-M215 (PLC -> LinuxCNC) ---
             try:
-                r = client.read_coils(ADDR_STATUS, count=NUM_STATUS, device_id=SLAVE_ID)
+                r = client.read_coils(address=ADDR_STATUS, count=NUM_STATUS)
                 if not r.isError():
                     for i in range(NUM_STATUS):
                         h[status_pins[i]] = r.bits[i]
@@ -137,12 +196,14 @@ def main():
                 client.close()
                 continue
 
+            time.sleep(0.05)  # pausa entre transacoes
+
             # --- 2. Escrever comandos M100-M107 (LinuxCNC -> PLC) ---
             # So escreve se algum valor mudou
             current_cmd = [h[cmd_pins[i]] for i in range(NUM_CMD)]
             if current_cmd != last_cmd:
                 try:
-                    r = client.write_coils(ADDR_CMD, current_cmd, device_id=SLAVE_ID)
+                    r = client.write_coils(address=ADDR_CMD, values=current_cmd)
                     if not r.isError():
                         last_cmd = current_cmd[:]
                         log.info(f"Cmd escrito: {current_cmd}")
@@ -152,13 +213,14 @@ def main():
                 except Exception:
                     errors += 1
                     log.exception("Excecao escrita cmd")
+                time.sleep(0.05)
 
             # --- 3. Escrever RPM (D100) se mudou ---
             current_rpm = h["spindle-rpm"]
             if abs(current_rpm - last_rpm) > 0.5:
                 try:
                     rpm_int = max(0, min(65535, int(current_rpm)))
-                    r = client.write_register(ADDR_RPM, rpm_int, device_id=SLAVE_ID)
+                    r = client.write_register(address=ADDR_RPM, value=rpm_int)
                     if not r.isError():
                         last_rpm = current_rpm
                     else:
@@ -166,6 +228,22 @@ def main():
                 except Exception:
                     errors += 1
                     log.exception("Excecao escrita RPM")
+
+            # --- 4. Salvar posicao X/Z no PLC (a cada 2s) ---
+            now = time.monotonic()
+            if now - last_pos_save >= POS_SAVE_INTERVAL:
+                try:
+                    pos_x = h["pos-cmd-x"]
+                    pos_z = h["pos-cmd-z"]
+                    regs_x = float_to_regs(pos_x)
+                    regs_z = float_to_regs(pos_z)
+                    client.write_registers(address=ADDR_POS_X, values=regs_x + regs_z)
+                    time.sleep(0.05)
+                    client.write_register(address=ADDR_POS_OK, value=POS_VALID_MAGIC)
+                    last_pos_save = now
+                except Exception:
+                    errors += 1
+                    log.exception("Erro salvando posicao")
 
             h["num-errors"] = errors
 

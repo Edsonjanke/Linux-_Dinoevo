@@ -1,6 +1,6 @@
 # Relatório Integração AMS32 + LinuxCNC - Torno Dino Evo
-**Data:** 2026-04-13
-**Status:** Comunicação OK, falta carregar programa Ladder no PLC
+**Data:** 2026-04-15
+**Status:** Comunicação Modbus ASCII via COM1 RS-232 FUNCIONANDO, position save/restore implementado
 
 ---
 
@@ -16,9 +16,22 @@ Configuração do CLP AMS32 (clone Delta DVP-32ES200R) como módulo de I/O auxil
 - Componente testado e funcionando dentro do LinuxCNC (zero erros, connected=TRUE)
 - Sinal coolant-flood conectado ao PLC (M100 escrito com sucesso via Modbus)
 - Programa Ladder completo criado para o AMS32
+- **Ladder carregado no PLC** - Y0 acende/apaga com M100 (testado via WPLSoft)
+- Adaptador USB-RS485 testado com loopback - **defeituoso** (não é RS-485 real)
+- Ladder atualizado para COM1 RS-232: D1036=H87, M1139=OFF (escravo Modbus ASCII 9600 7E1)
 
-### O que falta
-- **Carregar programa Ladder no AMS32 via WPLSoft** (Wine no Windows ou Linux)
+### Feito em 2026-04-15
+- Comunicação Modbus ASCII via COM1 RS-232 testada e **FUNCIONANDO**
+- Testes completos: M100 (coolant), M101/M102 (spindle FWD/REV), D100 (RPM) - todos OK
+- D2000+ confirmado como **retentivo** (sobrevive power cycle)
+- **Position save/restore implementado:** posição X/Z salva no PLC a cada 2s, restaurada automaticamente no startup
+- Bloco 3 (spindle at-speed via X4) removido - at-speed pelo encoder da placa (near.spindle)
+- ams32_hal.py ajustado: POLL_RATE 200ms, pausas entre transações, API pymodbus 3.12
+- pos_restore.py criado: home automático + G10 L20 para restaurar coordenadas
+- brltty removido (interferia com CH340)
+
+### O que falta (próximo passo)
+- Testar save/restore abrindo LinuxCNC (validar ciclo completo)
 - Conectar demais sinais HAL (spindle, alarmes, lube, etc)
 - Testar saídas físicas (Y0-Y4) com o Ladder rodando
 

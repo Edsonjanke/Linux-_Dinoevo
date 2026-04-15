@@ -34,3 +34,10 @@ loadusr -Wn ams32 python3 ams32_hal.py
 
 # Coolant M8/M9 -> PLC M100 -> Y0 (bomba)
 net coolant-flood    => ams32.cmd.00
+
+# Posicao dos eixos -> PLC D2000-D2003 (salvar posicao para restore)
+net x-pos-fb         => ams32.pos-cmd-x
+net z-pos-fb         => ams32.pos-cmd-z
+
+# Restaurar posicao salva no PLC ao iniciar LinuxCNC
+loadusr -W python3 pos_restore.py

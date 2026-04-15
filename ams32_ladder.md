@@ -17,7 +17,7 @@
 | X1      | Jog X-              | Botao NA  |
 | X2      | Jog Z+              | Botao NA  |
 | X3      | Jog Z-              | Botao NA  |
-| X4      | VFD at speed         | Contato   |
+| X4      | (livre)             |           |
 | X5      | Nivel coolant baixo  | Boia NF   |
 | X6      | Nivel lube baixo     | Boia NF   |
 | X7      | Falha geral / E-stop | NF        |
@@ -47,7 +47,7 @@
 | M201 | 2249     | Jog X-                    |
 | M202 | 2250     | Jog Z+                    |
 | M203 | 2251     | Jog Z-                    |
-| M204 | 2252     | Spindle at speed          |
+| M204 | 2252     | (livre)                   |
 | M205 | 2253     | Alarme coolant baixo      |
 | M206 | 2254     | Alarme lube baixo         |
 | M207 | 2255     | Falha geral               |
@@ -65,6 +65,9 @@
 | T21       | Lube intervalo                  |
 | D110      | Lube tempo ON em seg (default 5)|
 | D111      | Lube intervalo em seg (def 900) |
+| D2000-D2001 | Posicao X (float 32bit, retentivo) |
+| D2002-D2003 | Posicao Z (float 32bit, retentivo) |
+| D2004     | Flag validacao posicao (0xABCD)   |
 
 ---
 
@@ -114,13 +117,6 @@ LD    M101
 AND   M102
 ANI   M207
 OUT   Y2
-
-// ============================================================
-// BLOCO 3: SPINDLE AT-SPEED
-// X4 (feedback VFD) => M204 (status para LinuxCNC)
-// ============================================================
-LD    X4
-OUT   M204
 
 // ============================================================
 // BLOCO 4: JOG MANUAL (botoes fisicos com debounce 100ms)
