@@ -24,6 +24,7 @@ import time
 import sys
 import struct
 import logging
+import linuxcnc
 from pymodbus.client import ModbusSerialClient
 from pymodbus.framer import FramerType
 
@@ -131,6 +132,9 @@ def main():
     last_rpm = 0.0
     last_pos_save = 0.0
     pos_restored = False
+    pos_applied = False
+    stat = linuxcnc.stat()
+    cmd = linuxcnc.command()
 
     log.info(f"Configurado: {SERIAL_PORT} ASCII 9600 7E1")
     print(f"ams32_hal: Iniciando em {SERIAL_PORT} ASCII 9600 7E1, log em {LOG_FILE}")
@@ -229,21 +233,42 @@ def main():
                     errors += 1
                     log.exception("Excecao escrita RPM")
 
-            # --- 4. Salvar posicao X/Z no PLC (a cada 2s) ---
+            # --- 4. Salvar posicao X/Z no PLC (a cada 2s, so se homed) ---
             now = time.monotonic()
             if now - last_pos_save >= POS_SAVE_INTERVAL:
                 try:
-                    pos_x = h["pos-cmd-x"]
-                    pos_z = h["pos-cmd-z"]
-                    regs_x = float_to_regs(pos_x)
-                    regs_z = float_to_regs(pos_z)
-                    client.write_registers(address=ADDR_POS_X, values=regs_x + regs_z)
-                    time.sleep(0.05)
-                    client.write_register(address=ADDR_POS_OK, value=POS_VALID_MAGIC)
-                    last_pos_save = now
+                    stat.poll()
+                    if stat.homed[0] and stat.homed[1]:
+                        pos_x = h["pos-cmd-x"]
+                        pos_z = h["pos-cmd-z"]
+                        regs_x = float_to_regs(pos_x)
+                        regs_z = float_to_regs(pos_z)
+                        client.write_registers(address=ADDR_POS_X, values=regs_x + regs_z)
+                        time.sleep(0.05)
+                        client.write_register(address=ADDR_POS_OK, value=POS_VALID_MAGIC)
+                        last_pos_save = now
                 except Exception:
                     errors += 1
                     log.exception("Erro salvando posicao")
+
+            # --- 5. Restaurar posicao salva (1x apos home) ---
+            if not pos_applied and h["pos-valid"]:
+                try:
+                    stat.poll()
+                    if stat.homed[0] and stat.homed[1]:
+                        saved_x = h["pos-saved-x"]
+                        saved_z = h["pos-saved-z"]
+                        cmd.mode(linuxcnc.MODE_MDI)
+                        cmd.wait_complete()
+                        cmd.mdi(f"G10 L20 P1 X{saved_x:.4f} Z{saved_z:.4f}")
+                        cmd.wait_complete(5)
+                        cmd.mode(linuxcnc.MODE_MANUAL)
+                        cmd.wait_complete()
+                        pos_applied = True
+                        log.info(f"Posicao restaurada: X={saved_x:.4f} Z={saved_z:.4f}")
+                        print(f"ams32_hal: Posicao restaurada! X={saved_x:.4f} Z={saved_z:.4f}")
+                except Exception:
+                    log.exception("Erro restaurando posicao")
 
             h["num-errors"] = errors
 
