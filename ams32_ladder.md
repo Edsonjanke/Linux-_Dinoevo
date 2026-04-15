@@ -123,28 +123,20 @@ OUT   Y2
 // X0-X3 => T0-T3 (debounce) => M200-M203 (status Modbus)
 // Timer base = 10ms, K10 = 100ms
 // ============================================================
-// Jog X+
+// Jog X+ (direto, sem debounce - Modbus nao le X via FC02)
 LD    X0
-TMR   T0    K10
-LD    T0
 OUT   M200
 
 // Jog X-
 LD    X1
-TMR   T1    K10
-LD    T1
 OUT   M201
 
 // Jog Z+
 LD    X2
-TMR   T2    K10
-LD    T2
 OUT   M202
 
 // Jog Z-
 LD    X3
-TMR   T3    K10
-LD    T3
 OUT   M203
 
 // ============================================================
@@ -154,8 +146,6 @@ OUT   M203
 // Timer base = 100ms, K20 = 2s
 // ============================================================
 LDI   X5
-TMR   T10   K20
-LD    T10
 OUT   M205
 // Alarme sonoro se coolant baixo
 LD    M205
@@ -167,8 +157,6 @@ OUT   Y4
 // Delay 2s
 // ============================================================
 LDI   X6
-TMR   T11   K20
-LD    T11
 OUT   M206
 
 // ============================================================

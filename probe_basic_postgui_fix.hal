@@ -38,3 +38,9 @@ net coolant-flood    => ams32.cmd.00
 # Posicao dos eixos -> PLC D2000-D2003 (salvar posicao para restore)
 net x-pos-fb         => ams32.pos-cmd-x
 net z-pos-fb         => ams32.pos-cmd-z
+
+# Jog via botoes PLC: M200-M203 -> halui jog
+net jog-x-pos        ams32.status.00
+net jog-x-neg        ams32.status.01
+net jog-z-pos        ams32.status.02
+net jog-z-neg        ams32.status.03

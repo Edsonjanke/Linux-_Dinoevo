@@ -251,24 +251,34 @@ def main():
                     errors += 1
                     log.exception("Erro salvando posicao")
 
-            # --- 5. Restaurar posicao salva (1x apos home) ---
-            if not pos_applied and h["pos-valid"]:
+            # --- 5. Auto-home + restaurar posicao (1x no startup) ---
+            if not pos_applied:
                 try:
                     stat.poll()
-                    if stat.homed[0] and stat.homed[1]:
-                        saved_x = h["pos-saved-x"]
-                        saved_z = h["pos-saved-z"]
-                        cmd.mode(linuxcnc.MODE_MDI)
-                        cmd.wait_complete()
-                        cmd.mdi(f"G10 L20 P1 X{saved_x:.4f} Z{saved_z:.4f}")
-                        cmd.wait_complete(5)
+                    # Auto-home quando Machine ON e joints nao referenciados
+                    if stat.task_state == linuxcnc.STATE_ON and not (stat.homed[0] and stat.homed[1]):
                         cmd.mode(linuxcnc.MODE_MANUAL)
                         cmd.wait_complete()
+                        cmd.home(1)  # Z primeiro (HOME_SEQUENCE=1)
+                        cmd.home(0)  # X depois (HOME_SEQUENCE=2)
+                        log.info("Auto-home disparado")
+                        print("ams32_hal: Auto-home disparado")
+                    # Restaurar posicao apos home completo
+                    elif stat.homed[0] and stat.homed[1]:
+                        if h["pos-valid"]:
+                            saved_x = h["pos-saved-x"]
+                            saved_z = h["pos-saved-z"]
+                            cmd.mode(linuxcnc.MODE_MDI)
+                            cmd.wait_complete()
+                            cmd.mdi(f"G10 L20 P1 X{saved_x:.4f} Z{saved_z:.4f}")
+                            cmd.wait_complete(5)
+                            cmd.mode(linuxcnc.MODE_MANUAL)
+                            cmd.wait_complete()
+                            log.info(f"Posicao restaurada: X={saved_x:.4f} Z={saved_z:.4f}")
+                            print(f"ams32_hal: Posicao restaurada! X={saved_x:.4f} Z={saved_z:.4f}")
                         pos_applied = True
-                        log.info(f"Posicao restaurada: X={saved_x:.4f} Z={saved_z:.4f}")
-                        print(f"ams32_hal: Posicao restaurada! X={saved_x:.4f} Z={saved_z:.4f}")
                 except Exception:
-                    log.exception("Erro restaurando posicao")
+                    log.exception("Erro no auto-home/restore")
 
             h["num-errors"] = errors
 
