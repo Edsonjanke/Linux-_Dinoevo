@@ -174,6 +174,17 @@ setp halui.feed-override.scale 0.01
 setp halui.feed-override.count-enable 1
 
 # =============================================
+#  SPINDLE OVERRIDE via MPG em modo AUTO
+# =============================================
+# Em AUTO: MPG roda -> ajusta spindle override (chave MPG ignorada)
+# Em JOG/MDI: MPG faz jog normalmente (override count-enable = FALSE)
+# Escala 0.01 = 1% por click
+
+net mpg-counts       => halui.spindle.0.override.counts
+setp halui.spindle.0.override.scale 0.01
+net mode-is-auto     halui.mode.is-auto => halui.spindle.0.override.count-enable
+
+# =============================================
 #  FIM DE CURSO - Chave compartilhada X e Z
 # =============================================
 # GPIO.014 = Fim de curso NF (serie) - usado apenas como HOME
