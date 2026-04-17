@@ -39,8 +39,12 @@ net coolant-flood    => ams32.cmd.00
 net x-pos-fb         => ams32.pos-cmd-x
 net z-pos-fb         => ams32.pos-cmd-z
 
-# Jog via botoes PLC: M200-M203 -> halui jog
-net jog-x-pos        ams32.status.00
-net jog-x-neg        ams32.status.01
-net jog-z-pos        ams32.status.02
-net jog-z-neg        ams32.status.03
+# Jog via botoes PLC: M200-M203 -> sinais jog-x/z-pos/neg (ja netados em Dino_Evo.hal)
+# Velocidade = DEFAULT_LINEAR_VELOCITY (6 mm/s = 360 mm/min)
+# Modo teleop usa halui.axis.*, nao halui.joint.*
+sets jog-speed 6
+
+net jog-x-pos  <=  ams32.status.00
+net jog-x-neg  <=  ams32.status.01
+net jog-z-pos  <=  ams32.status.02
+net jog-z-neg  <=  ams32.status.03

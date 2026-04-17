@@ -46,15 +46,17 @@ POS_SAVE_INTERVAL = 2.0  # salvar posicao a cada 2 segundos
 POS_VALID_MAGIC = 0xABCD  # valor magico para validar posicao salva
 
 # Enderecos Modbus
-ADDR_CMD    = 2148   # M100-M107 (escrita coils)
-ADDR_STATUS = 2248   # M200-M215 (leitura coils)
-ADDR_RPM    = 4196   # D100 (escrita registro)
-ADDR_POS_X  = 6096   # D2000-D2001 (posicao X, float 32bit)
-ADDR_POS_Z  = 6098   # D2002-D2003 (posicao Z, float 32bit)
-ADDR_POS_OK = 6100   # D2004 (flag validacao = 0xABCD)
+ADDR_CMD       = 2148   # M100-M107 (escrita coils)
+ADDR_STATUS    = 2248   # M200-M215 (leitura coils)
+ADDR_FORCE_JOG = 2348   # M300-M303 (jog virtual: X+/X-/Z+/Z-)
+ADDR_RPM       = 4196   # D100 (escrita registro)
+ADDR_POS_X     = 6096   # D2000-D2001 (posicao X, float 32bit)
+ADDR_POS_Z     = 6098   # D2002-D2003 (posicao Z, float 32bit)
+ADDR_POS_OK    = 6100   # D2004 (flag validacao = 0xABCD)
 
-NUM_CMD    = 8
-NUM_STATUS = 16
+NUM_CMD       = 8
+NUM_STATUS    = 16
+NUM_FORCE_JOG = 4
 
 
 def float_to_regs(val):
@@ -90,6 +92,14 @@ def main():
         for i in range(NUM_STATUS):
             h.newpin(f"status.{i:02d}", hal.HAL_BIT, hal.HAL_OUT)
             status_pins.append(f"status.{i:02d}")
+
+        # Pins de force-jog (LinuxCNC -> M300-M303 = jog virtual)
+        force_jog_pins = [
+            "force-jog-x-pos", "force-jog-x-neg",
+            "force-jog-z-pos", "force-jog-z-neg",
+        ]
+        for name in force_jog_pins:
+            h.newpin(name, hal.HAL_BIT, hal.HAL_IN)
 
         # Pin RPM
         h.newpin("spindle-rpm", hal.HAL_FLOAT, hal.HAL_IN)
@@ -129,6 +139,7 @@ def main():
     errors = 0
     connected = False
     last_cmd = [False] * NUM_CMD
+    last_force_jog = [True] * NUM_FORCE_JOG  # forca escrita inicial para zerar M300-M303
     last_rpm = 0.0
     last_pos_save = 0.0
     pos_restored = False
@@ -219,6 +230,22 @@ def main():
                     log.exception("Excecao escrita cmd")
                 time.sleep(0.05)
 
+            # --- 2b. Escrever force-jog M300-M303 se mudou ---
+            current_fj = [h[p] for p in force_jog_pins]
+            if current_fj != last_force_jog:
+                try:
+                    r = client.write_coils(address=ADDR_FORCE_JOG, values=current_fj)
+                    if not r.isError():
+                        last_force_jog = current_fj[:]
+                        log.info(f"Force-jog escrito: {current_fj}")
+                    else:
+                        errors += 1
+                        log.warning(f"Erro escrita force-jog: {r}")
+                except Exception:
+                    errors += 1
+                    log.exception("Excecao escrita force-jog")
+                time.sleep(0.05)
+
             # --- 3. Escrever RPM (D100) se mudou ---
             current_rpm = h["spindle-rpm"]
             if abs(current_rpm - last_rpm) > 0.5:
@@ -251,20 +278,11 @@ def main():
                     errors += 1
                     log.exception("Erro salvando posicao")
 
-            # --- 5. Auto-home + restaurar posicao (1x no startup) ---
+            # --- 5. Restaurar posicao salva apos home (1x) ---
             if not pos_applied:
                 try:
                     stat.poll()
-                    # Auto-home quando Machine ON e joints nao referenciados
-                    if stat.task_state == linuxcnc.STATE_ON and not (stat.homed[0] and stat.homed[1]):
-                        cmd.mode(linuxcnc.MODE_MANUAL)
-                        cmd.wait_complete()
-                        cmd.home(1)  # Z primeiro (HOME_SEQUENCE=1)
-                        cmd.home(0)  # X depois (HOME_SEQUENCE=2)
-                        log.info("Auto-home disparado")
-                        print("ams32_hal: Auto-home disparado")
-                    # Restaurar posicao apos home completo
-                    elif stat.homed[0] and stat.homed[1]:
+                    if stat.homed[0] and stat.homed[1]:
                         if h["pos-valid"]:
                             saved_x = h["pos-saved-x"]
                             saved_z = h["pos-saved-z"]
@@ -278,7 +296,7 @@ def main():
                             print(f"ams32_hal: Posicao restaurada! X={saved_x:.4f} Z={saved_z:.4f}")
                         pos_applied = True
                 except Exception:
-                    log.exception("Erro no auto-home/restore")
+                    log.exception("Erro restaurando posicao")
 
             h["num-errors"] = errors
 

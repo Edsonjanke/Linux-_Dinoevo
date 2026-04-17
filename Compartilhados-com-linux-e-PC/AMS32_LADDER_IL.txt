@@ -38,18 +38,23 @@ ANI   M207
 OUT   Y2
 
 // ============================================================
-// BLOCO 4: JOG MANUAL (X direto para M, sem debounce)
+// BLOCO 4: JOG MANUAL (X hardware OR M300-M303 virtual para teste)
+// Forcar M300/301/302/303 no monitor = mesma coisa que apertar X0/1/2/3
 // ============================================================
 LD    X0
+OR    M300
 OUT   M200
 
 LD    X1
+OR    M301
 OUT   M201
 
 LD    X2
+OR    M302
 OUT   M202
 
 LD    X3
+OR    M303
 OUT   M203
 
 // ============================================================
