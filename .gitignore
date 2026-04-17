@@ -43,3 +43,7 @@ diag_encoder*.sh
 fix_encoder.sh
 mapear_db15.sh
 hm2.txt
+
+# Installer/artifact downloads
+DELTA_IA-PLC_WPL_*.zip
+google-chrome-stable*.deb*
