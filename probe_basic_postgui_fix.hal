@@ -40,11 +40,13 @@ net x-pos-fb         => ams32.pos-cmd-x
 net z-pos-fb         => ams32.pos-cmd-z
 
 # Jog via botoes PLC: M200-M203 -> sinais jog-x/z-pos/neg (ja netados em Dino_Evo.hal)
-# Velocidade = DEFAULT_LINEAR_VELOCITY (6 mm/s = 360 mm/min)
+# Velocidade = G0 (rapid): 4500 mm/min = 75 mm/s (X MAX_VELOCITY; Z clampa em 72 mm/s = 4320 mm/min)
+# ATENCAO: halui.axis.jog-speed em LinuxCNC 2.9 e em MACHINE UNITS PER MINUTE (nao por segundo)
 # Modo teleop usa halui.axis.*, nao halui.joint.*
-sets jog-speed 6
+sets jog-speed 4500
 
 net jog-x-pos  <=  ams32.status.00
 net jog-x-neg  <=  ams32.status.01
-net jog-z-pos  <=  ams32.status.02
-net jog-z-neg  <=  ams32.status.03
+# Z invertido: botao "Z+" (M202) gera jog-z-neg; "Z-" (M203) gera jog-z-pos
+net jog-z-pos  <=  ams32.status.03
+net jog-z-neg  <=  ams32.status.02
